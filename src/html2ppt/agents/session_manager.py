@@ -121,9 +121,9 @@ class SessionManager:
                         session.state.update(updates)
 
                 logger.debug(
-                    "Workflow event",
+                    "Workflow update",
                     session_id=session.session_id,
-                    event=str(event),
+                    update_data=str(event),
                 )
 
         except Exception as e:
