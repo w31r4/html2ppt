@@ -245,11 +245,15 @@ class PresentationWorkflow:
             component_names: list[str] = []
             for index, section in enumerate(outline.sections):
                 base_name = _sanitize_component_name(section.title)
-                name = base_name or "Slide"
-                if name in used_names:
-                    name = f"{name}{index + 1}"
-                used_names.add(name)
-                component_names.append(f"{name}Slide")
+                if base_name == "Slide":
+                    component_name = f"Slide{index + 1}"
+                else:
+                    name = base_name
+                    if name in used_names:
+                        name = f"{name}{index + 1}"
+                    component_name = name if name.endswith("Slide") else f"{name}Slide"
+                    used_names.add(name)
+                component_names.append(component_name)
 
             async def generate_component(index: int, section: OutlineSection) -> tuple[int, VueComponent]:
                 async with semaphore:

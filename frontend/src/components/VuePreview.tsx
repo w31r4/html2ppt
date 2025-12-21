@@ -7,18 +7,13 @@ interface VuePreviewProps {
   className?: string;
 }
 
-const SCRIPT_HELPERS = `
-const {
-  ref,
-  computed,
-  reactive,
-  watch,
-  watchEffect,
-  onMounted,
-  onBeforeMount,
-  onUnmounted,
-} = Vue;
-`;
+const normalizeImports = (code: string) =>
+  code
+    .replace(/import\s+\{([^}]+)\}\s+from\s+['"]vue['"];?/g, (_, imports) => {
+      const normalized = String(imports).replace(/\s+as\s+/g, ': ');
+      return `const {${normalized}} = Vue;`;
+    })
+    .replace(/^\s*import[^;]+;?\s*$/gm, '');
 
 export default function VuePreview({ code, className = '' }: VuePreviewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -46,11 +41,12 @@ export default function VuePreview({ code, className = '' }: VuePreviewProps) {
       let scriptExports: Record<string, unknown> = {};
       if (descriptor.script || descriptor.scriptSetup) {
         const script = compileScript(descriptor, { id: 'preview' });
-        const scriptCode = script.content
-          .replace(/^\s*import[^;]+;?\s*$/gm, '')
-          .replace(/export default/g, 'return');
+        const scriptCode = normalizeImports(script.content)
+          .replace(/export default/g, 'return')
+          .replace(/export const /g, 'const ')
+          .replace(/export function /g, 'function ');
 
-        const scriptFn = new Function('Vue', `${SCRIPT_HELPERS}\n${scriptCode}`);
+        const scriptFn = new Function('Vue', scriptCode);
         scriptExports = (scriptFn(VueRuntime) as Record<string, unknown>) || {};
       }
 
@@ -58,16 +54,19 @@ export default function VuePreview({ code, className = '' }: VuePreviewProps) {
         source: template,
         filename: 'Component.vue',
         id: 'preview',
+        compilerOptions: {
+          isCustomElement: (tag) => tag.startsWith('v-'),
+        },
       });
 
       if (templateResult.errors.length) {
         throw new Error(String(templateResult.errors[0]));
       }
 
-      const renderCode = templateResult.code
-        .replace(/^\s*import[^;]+;?\s*$/gm, '')
+      const renderCode = normalizeImports(templateResult.code)
         .replace(/export function render/, 'return function render')
-        .replace(/export const render/, 'return function render');
+        .replace(/export const render/, 'return function render')
+        .replace(/export const /g, 'const ');
       const render = new Function('Vue', renderCode)(VueRuntime);
 
       const component = {
@@ -84,6 +83,23 @@ export default function VuePreview({ code, className = '' }: VuePreviewProps) {
       }
 
       app = VueRuntime.createApp(component);
+      app.directive('click', {
+        mounted() {},
+        updated() {},
+      });
+      app.directive('motion', {
+        mounted() {},
+        updated() {},
+      });
+      app.component(
+        'v-clicks',
+        VueRuntime.defineComponent({
+          name: 'v-clicks',
+          setup(_, { slots }) {
+            return () => VueRuntime.h('div', slots.default ? slots.default() : []);
+          },
+        })
+      );
       app.mount(containerRef.current as HTMLDivElement);
     };
 

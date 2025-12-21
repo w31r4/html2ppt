@@ -197,37 +197,47 @@ export default function ResultPage() {
         {activeTab === 'preview' && (
           <div className="p-6">
             <div className="space-y-6">
-              {result.slides.map((slide, index) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg overflow-hidden"
-                >
-                  <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                    <span className="text-sm font-medium text-gray-600">
-                      Slide {index + 1}
-                    </span>
+              {result.slides.map((slide, index) => {
+                const componentCode = slide.component_name
+                  ? componentMap.get(slide.component_name)
+                  : null;
+
+                return (
+                  <div
+                    key={index}
+                    className="border border-gray-200 rounded-lg overflow-hidden"
+                  >
+                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                      <span className="text-sm font-medium text-gray-600">
+                        Slide {index + 1}
+                      </span>
+                    </div>
+                    <div className="p-6 bg-white aspect-video flex items-center justify-center">
+                      {componentCode ? (
+                        <VuePreview
+                          code={componentCode}
+                          className="h-full w-full"
+                        />
+                      ) : slide.component_name ? (
+                        <div className="text-sm text-red-600">
+                          组件缺失：{slide.component_name}
+                        </div>
+                      ) : (
+                        <div
+                          className="prose max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html: slide.content
+                              .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
+                              .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
+                              .replace(/^-\s+(.+)$/gm, '<li>$1</li>')
+                              .replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>'),
+                          }}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <div className="p-6 bg-white aspect-video flex items-center justify-center">
-                    {slide.component_name && componentMap.has(slide.component_name) ? (
-                      <VuePreview
-                        code={componentMap.get(slide.component_name) || ''}
-                        className="h-full w-full"
-                      />
-                    ) : (
-                      <div
-                        className="prose max-w-none"
-                        dangerouslySetInnerHTML={{
-                          __html: slide.content
-                            .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
-                            .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
-                            .replace(/^-\s+(.+)$/gm, '<li>$1</li>')
-                            .replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>'),
-                        }}
-                      />
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

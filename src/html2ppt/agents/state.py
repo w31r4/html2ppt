@@ -459,7 +459,7 @@ def set_slidev_result(
     slides: list[SlidevSlide],
     slides_md: str,
 ) -> dict:
-    """Set Slidev conversion result.
+    """Set Slidev assembly result.
 
     Args:
         state: Current state
