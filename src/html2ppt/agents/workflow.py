@@ -243,14 +243,36 @@ class PresentationWorkflow:
                     progress=f"{i + 1}/{total_sections}",
                 )
 
+                # Extract visual suggestions and animation effects
+                visual_dict = None
+                if section.visual_suggestions:
+                    visual_dict = {
+                        "background": section.visual_suggestions.background,
+                        "core_image": section.visual_suggestions.core_image,
+                        "layout": section.visual_suggestions.layout,
+                        "image_url": section.visual_suggestions.image_url,
+                    }
+
+                animation_dict = None
+                if section.animation_effects:
+                    animation_dict = {
+                        "description": section.animation_effects.description,
+                        "elements": section.animation_effects.elements,
+                    }
+
                 prompt = get_react_prompt(
                     section_title=section.title,
                     section_points=section.points,
                     speaker_notes=section.speaker_notes,
+                    visual_suggestions=visual_dict,
+                    animation_effects=animation_dict,
+                    raw_content=section.raw_content,
                 )
 
                 messages = [
-                    SystemMessage(content="你是一位专业的React前端开发工程师，擅长创建美观的演示文稿组件。"),
+                    SystemMessage(
+                        content="你是一位专业的React前端开发工程师和动画专家，擅长创建美观且富有动感的演示文稿组件。"
+                    ),
                     HumanMessage(content=prompt),
                 ]
 

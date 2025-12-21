@@ -20,12 +20,32 @@ class WorkflowStage(str, Enum):
     ERROR = "error"
 
 
+class VisualSuggestion(BaseModel):
+    """Visual design suggestions for a slide."""
+
+    background: Optional[str] = Field(None, description="Background color/gradient/image description")
+    core_image: Optional[str] = Field(None, description="Core image or illustration description")
+    layout: Optional[str] = Field(None, description="Layout arrangement description")
+    image_url: Optional[str] = Field(None, description="Optional specific image URL")
+
+
+class AnimationEffect(BaseModel):
+    """Animation effects for slide elements."""
+
+    description: str = Field(..., description="Animation effect description")
+    elements: list[str] = Field(default_factory=list, description="Individual animation steps")
+
+
 class OutlineSection(BaseModel):
     """A section in the presentation outline."""
 
-    title: str = Field(..., description="Section title (H2)")
+    title: str = Field(..., description="Section title")
+    subtitle: Optional[str] = Field(None, description="Optional subtitle")
     points: list[str] = Field(default_factory=list, description="Bullet points in the section")
+    visual_suggestions: Optional[VisualSuggestion] = Field(None, description="Visual design suggestions")
+    animation_effects: Optional[AnimationEffect] = Field(None, description="Animation effects")
     speaker_notes: Optional[str] = Field(None, description="Optional speaker notes")
+    raw_content: Optional[str] = Field(None, description="Raw markdown content of this section")
 
 
 class Outline(BaseModel):
@@ -39,77 +59,206 @@ class Outline(BaseModel):
     def from_markdown(cls, markdown: str) -> "Outline":
         """Parse markdown into structured outline.
 
+        Supports rich format with visual suggestions and animation effects.
+
         Args:
             markdown: Raw markdown outline text
 
         Returns:
             Parsed Outline object
         """
+        import re
+
         lines = markdown.strip().split("\n")
         title = ""
         sections: list[OutlineSection] = []
-        current_section: Optional[OutlineSection] = None
+
+        # Split by page separators (--- or ### Page N:)
+        page_pattern = r"(?:^|\n)(?:---\s*\n)?###\s*Page\s*\d+[：:]\s*"
+        page_splits = re.split(page_pattern, markdown)
+
+        # Find main title (H1)
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("# ") and not stripped.startswith("## ") and not stripped.startswith("### "):
+                title = stripped[2:].strip()
+                break
+
+        # Parse each page section
+        for page_content in page_splits:
+            if not page_content.strip():
+                continue
+
+            section = cls._parse_page_section(page_content.strip())
+            if section:
+                sections.append(section)
+
+        return cls(
+            title=title or "Untitled Presentation",
+            sections=sections,
+            raw_markdown=markdown,
+        )
+
+    @classmethod
+    def _parse_page_section(cls, content: str) -> Optional["OutlineSection"]:
+        """Parse a single page section from markdown.
+
+        Args:
+            content: Raw markdown content of one page
+
+        Returns:
+            Parsed OutlineSection or None
+        """
+        import re
+
+        lines = content.split("\n")
+        if not lines:
+            return None
+
+        # Extract title from first line or **标题** field
+        page_title = ""
+        subtitle = None
+        points: list[str] = []
+        visual_suggestions: Optional[VisualSuggestion] = None
+        animation_effects: Optional[AnimationEffect] = None
+        speaker_notes = None
+
+        # State tracking
+        current_block = None  # 'visual', 'animation', 'content', 'notes'
+        visual_data: dict = {}
+        animation_steps: list[str] = []
+
         in_speaker_notes = False
         speaker_notes_lines: list[str] = []
 
         for line in lines:
             stripped = line.strip()
 
-            # Skip empty lines
+            # Skip empty lines in normal mode
             if not stripped:
                 if in_speaker_notes:
                     speaker_notes_lines.append("")
                 continue
 
-            # Main title (H1)
-            if stripped.startswith("# ") and not stripped.startswith("## "):
-                title = stripped[2:].strip()
-                continue
-
-            # Section title (H2)
-            if stripped.startswith("## "):
-                # Save previous section
-                if current_section is not None:
-                    if speaker_notes_lines:
-                        current_section.speaker_notes = "\n".join(speaker_notes_lines).strip()
-                    sections.append(current_section)
-
-                current_section = OutlineSection(
-                    title=stripped[3:].strip(),
-                    points=[],
-                )
-                in_speaker_notes = False
-                speaker_notes_lines = []
-                continue
+            # Page title (first line might be the title)
+            if not page_title and not stripped.startswith("*") and not stripped.startswith("-"):
+                # Check if it's a plain title line
+                if not stripped.startswith("**"):
+                    page_title = stripped
+                    continue
 
             # Speaker notes block
             if stripped.lower().startswith("<!--") and "speaker" in stripped.lower():
                 in_speaker_notes = True
+                current_block = "notes"
                 continue
 
             if stripped.endswith("-->") and in_speaker_notes:
                 in_speaker_notes = False
+                speaker_notes = "\n".join(speaker_notes_lines).strip()
+                current_block = None
                 continue
 
             if in_speaker_notes:
                 speaker_notes_lines.append(stripped)
                 continue
 
-            # Bullet points
-            if stripped.startswith("- ") or stripped.startswith("* "):
-                if current_section is not None:
-                    current_section.points.append(stripped[2:].strip())
+            # Parse structured fields
+            if "**标题**" in stripped or "**标题：**" in stripped:
+                match = re.search(r"\*\*标题[：:]?\*\*[：:\s]*(.+)", stripped)
+                if match:
+                    page_title = match.group(1).strip()
+                continue
 
-        # Save last section
-        if current_section is not None:
-            if speaker_notes_lines:
-                current_section.speaker_notes = "\n".join(speaker_notes_lines).strip()
-            sections.append(current_section)
+            if "**副标题**" in stripped or "**副标题：**" in stripped:
+                match = re.search(r"\*\*副标题[：:]?\*\*[：:\s]*(.+)", stripped)
+                if match:
+                    subtitle = match.group(1).strip()
+                continue
 
-        return cls(
-            title=title or "Untitled Presentation",
-            sections=sections,
-            raw_markdown=markdown,
+            # Visual suggestions block
+            if "**视觉建议**" in stripped:
+                current_block = "visual"
+                continue
+
+            if current_block == "visual":
+                if "**背景**" in stripped:
+                    match = re.search(r"\*\*背景[：:]?\*\*[：:\s]*(.+)", stripped)
+                    if match:
+                        visual_data["background"] = match.group(1).strip()
+                elif "**核心图片**" in stripped or "**核心图示**" in stripped:
+                    match = re.search(r"\*\*核心图[片示][：:]?\*\*[：:\s]*(.+)", stripped)
+                    if match:
+                        visual_data["core_image"] = match.group(1).strip()
+                elif "**布局**" in stripped:
+                    match = re.search(r"\*\*布局[：:]?\*\*[：:\s]*(.+)", stripped)
+                    if match:
+                        visual_data["layout"] = match.group(1).strip()
+                elif "**图片链接**" in stripped:
+                    match = re.search(r"\*\*图片链接[：:]?\*\*[：:\s]*(.+)", stripped)
+                    if match:
+                        visual_data["image_url"] = match.group(1).strip()
+                elif stripped.startswith("*   **") or stripped.startswith("- **"):
+                    # Still in visual block, sub-item
+                    pass
+                elif "**动画效果**" in stripped:
+                    current_block = "animation"
+                elif "**核心内容**" in stripped:
+                    current_block = "content"
+
+            # Animation effects block
+            if "**动画效果**" in stripped:
+                current_block = "animation"
+                continue
+
+            if current_block == "animation":
+                if stripped.startswith("*") or stripped.startswith("-"):
+                    # Remove list marker and add to animation steps
+                    step = re.sub(r"^[\*\-]\s*", "", stripped)
+                    if step and not step.startswith("**"):
+                        animation_steps.append(step)
+                elif "**" in stripped and not any(x in stripped for x in ["动画效果", "视觉建议", "核心内容"]):
+                    # End of animation block
+                    current_block = None
+
+            # Core content block
+            if "**核心内容**" in stripped:
+                current_block = "content"
+                continue
+
+            if current_block == "content":
+                if stripped.startswith("*") or stripped.startswith("-"):
+                    point = re.sub(r"^[\*\-]\s*", "", stripped)
+                    if point:
+                        points.append(point)
+                elif "**视觉建议**" in stripped:
+                    current_block = "visual"
+                elif "**动画效果**" in stripped:
+                    current_block = "animation"
+
+        # Build visual suggestions if we have data
+        if visual_data:
+            visual_suggestions = VisualSuggestion(**visual_data)
+
+        # Build animation effects if we have steps
+        if animation_steps:
+            animation_effects = AnimationEffect(
+                description="动画效果",
+                elements=animation_steps,
+            )
+
+        # Only return section if we have a title
+        if not page_title:
+            return None
+
+        return OutlineSection(
+            title=page_title,
+            subtitle=subtitle,
+            points=points,
+            visual_suggestions=visual_suggestions,
+            animation_effects=animation_effects,
+            speaker_notes=speaker_notes,
+            raw_content=content,
         )
 
     def to_markdown(self) -> str:
