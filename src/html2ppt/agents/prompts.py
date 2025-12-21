@@ -122,9 +122,41 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
 
 1. **技术栈**: Vue 3 SFC + UnoCSS (兼容Tailwind类)
 2. **尺寸**: 组件应适合16:9的幻灯片展示 (宽1920px, 高1080px 或等比缩放)
-3. **动画**: 使用Slidev内置 `v-click`/`v-clicks` 指令表达动画顺序
+3. **动画**: 使用Slidev内置 `v-click`/`v-clicks` 指令表达顺序，并结合CSS动画类做入场效果
 4. **背景**: 根据视觉建议实现渐变、图片或纯色背景
-5. **简洁脚本**: 尽量避免`<script>`，如需使用只写`<script setup>`且不引入外部依赖
+5. **样式**: 若使用自定义动画类，必须在 `<style scoped>` 内定义对应 `@keyframes`
+6. **简洁脚本**: 尽量避免`<script>`，如需使用只写`<script setup>`且不引入外部依赖
+
+## 动画实现规则
+
+- 使用 `v-click` 或 `v-clicks` 控制逐步出现顺序
+- 为需要入场的元素加动画类（例如 `anim-fade-in`, `anim-slide-up`）
+- 使用 `style="animation-delay: 200ms"` 做时间错位
+- 动画类必须在 `<style scoped>` 中定义，包含 `animation-fill-mode: both`
+- 循环动画（如 `anim-float`, `anim-pulse`, `anim-wave`, `anim-breathe`）适合装饰元素，不依赖 `v-click`
+
+## 动画建议映射（固定）
+
+- **淡入 / 渐显** → `anim-fade-in`
+- **从下方滑入 / 上滑** → `anim-slide-up`
+- **从上方滑入 / 下滑** → `anim-slide-down`
+- **从左侧滑入 / 右滑** → `anim-slide-in-left`
+- **从右侧滑入 / 左滑 / 推入** → `anim-slide-in-right`
+- **飞入 / 掠入** → `anim-fly-in`
+- **缩放弹入 / 放大出现** → `anim-scale-in`
+- **缩小出现 / 收缩出现** → `anim-scale-down`
+- **浮动 / 漂浮** → `anim-float`
+- **闪烁 / 脉冲高亮** → `anim-pulse`
+- **打字机** → `anim-typewriter`
+- **翻转入场** → `anim-flip-in`
+- **模糊渐清** → `anim-blur-in`
+- **弹跳 / 弹入** → `anim-bounce-in`
+- **抖动 / 震动** → `anim-shake`
+- **旋转入场 / 旋转** → `anim-rotate-in`
+- **波浪 / 起伏** → `anim-wave`
+- **呼吸 / 缩放呼吸** → `anim-breathe`
+
+当“动画建议”字段包含上述关键词时，必须使用对应动画类；没有明确关键词时选择最接近的类。
 
 ## 示例组件
 
@@ -134,26 +166,157 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
     <div class="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900"></div>
 
     <div class="relative z-10 text-center px-16">
-      <h1 class="text-6xl font-bold text-white mb-6" v-click>
+      <h1 class="text-6xl font-bold text-white mb-6 anim-fade-in" v-click>
         用 Go 构建 AI Agent 的"瑞士军刀"
       </h1>
-      <p class="text-2xl text-blue-200" v-click>
+      <p class="text-2xl text-blue-200 anim-slide-up" style="animation-delay: 200ms" v-click>
         深入解析模型上下文协议 (MCP)
       </p>
-      <p class="text-xl text-blue-300 mt-8" v-click>
+      <p class="text-xl text-blue-300 mt-8 anim-slide-up" style="animation-delay: 400ms" v-click>
         演讲者：张三
       </p>
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.anim-fade-in {
+  animation: fade-in 600ms ease-out both;
+}
+
+.anim-slide-up {
+  animation: slide-up 600ms ease-out both;
+}
+</style>
+```
+
+## 动画类定义示例（可复用，放入 `<style scoped>`）
+
+```css
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fly-in {
+  from { opacity: 0; transform: translateY(-36px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scale-down {
+  from { opacity: 0; transform: scale(1.06); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.9); }
+  60% { opacity: 1; transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes rotate-in {
+  from { opacity: 0; transform: rotate(-10deg); }
+  to { opacity: 1; transform: rotate(0deg); }
+}
+
+@keyframes wave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes flip-in {
+  from { opacity: 0; transform: rotateX(70deg); }
+  to { opacity: 1; transform: rotateX(0deg); }
+}
+
+@keyframes blur-in {
+  from { opacity: 0; filter: blur(8px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+.anim-slide-down { animation: slide-down 600ms ease-out both; }
+.anim-slide-in-left { animation: slide-in-left 600ms ease-out both; }
+.anim-slide-in-right { animation: slide-in-right 600ms ease-out both; }
+.anim-fly-in { animation: fly-in 650ms ease-out both; }
+.anim-scale-in { animation: scale-in 520ms ease-out both; }
+.anim-scale-down { animation: scale-down 520ms ease-out both; }
+.anim-float { animation: float 3s ease-in-out infinite; }
+.anim-pulse { animation: pulse 1.4s ease-in-out infinite; }
+.anim-typewriter { 
+  animation: typewriter 1.2s steps(20, end) both; 
+  overflow: hidden; 
+  white-space: nowrap; 
+}
+.anim-bounce-in { animation: bounce-in 700ms ease-out both; }
+.anim-shake { animation: shake 600ms ease-in-out both; }
+.anim-rotate-in { animation: rotate-in 600ms ease-out both; transform-origin: center; }
+.anim-wave { animation: wave 2.6s ease-in-out infinite; }
+.anim-breathe { animation: breathe 2.4s ease-in-out infinite; }
+.anim-flip-in { animation: flip-in 520ms ease-out both; transform-origin: center; }
+.anim-blur-in { animation: blur-in 650ms ease-out both; }
+</style>
 ```
 
 ## 生成要求
 
 1. **完整代码**: 输出完整的Vue SFC代码
 2. **无外部依赖**: 不要引入第三方库或图片资源
-3. **可运行**: 确保`<template>`语法正确
-4. **无额外解释**: 只输出代码，不添加任何解释性文字
+3. **动画落地**: 所有动画类必须有对应CSS定义
+4. **可运行**: 确保`<template>`语法正确
+5. **无额外解释**: 只输出代码，不添加任何解释性文字
 """
 
 
