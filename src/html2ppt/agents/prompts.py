@@ -151,10 +151,12 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
 - **翻转入场** → `anim-flip-in`
 - **模糊渐清** → `anim-blur-in`
 - **弹跳 / 弹入** → `anim-bounce-in`
+- **弹性进入 / 弹性入场** → `anim-elastic-in`
 - **抖动 / 震动** → `anim-shake`
 - **旋转入场 / 旋转** → `anim-rotate-in`
 - **波浪 / 起伏** → `anim-wave`
 - **呼吸 / 缩放呼吸** → `anim-breathe`
+- **高光 / 高亮 / 扫光** → `anim-highlight`
 
 当“动画建议”字段包含上述关键词时，必须使用对应动画类；没有明确关键词时选择最接近的类。
 
@@ -254,6 +256,13 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
   100% { transform: scale(1); }
 }
 
+@keyframes elastic-in {
+  0% { opacity: 0; transform: scale(0.7); }
+  55% { opacity: 1; transform: scale(1.08); }
+  75% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-6px); }
@@ -275,6 +284,11 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
 @keyframes breathe {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.03); }
+}
+
+@keyframes highlight {
+  0%, 100% { filter: brightness(1); box-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+  50% { filter: brightness(1.15); box-shadow: 0 0 18px rgba(255, 255, 255, 0.55); }
 }
 
 @keyframes flip-in {
@@ -301,10 +315,12 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
   white-space: nowrap; 
 }
 .anim-bounce-in { animation: bounce-in 700ms ease-out both; }
+.anim-elastic-in { animation: elastic-in 800ms ease-out both; }
 .anim-shake { animation: shake 600ms ease-in-out both; }
 .anim-rotate-in { animation: rotate-in 600ms ease-out both; transform-origin: center; }
 .anim-wave { animation: wave 2.6s ease-in-out infinite; }
 .anim-breathe { animation: breathe 2.4s ease-in-out infinite; }
+.anim-highlight { animation: highlight 1.4s ease-in-out infinite; }
 .anim-flip-in { animation: flip-in 520ms ease-out both; transform-origin: center; }
 .anim-blur-in { animation: blur-in 650ms ease-out both; }
 </style>
