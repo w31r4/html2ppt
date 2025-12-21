@@ -2,8 +2,11 @@
 
 from typing import Optional
 
+import io
+import zipfile
+
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from pydantic import BaseModel, Field
 
 from html2ppt.agents.session_manager import get_session_manager
@@ -89,9 +92,9 @@ async def submit_requirements(req: RequirementInput) -> OutlineResponse:
             WorkflowStage.INITIAL: "generating",
             WorkflowStage.OUTLINE_GENERATED: "draft",
             WorkflowStage.OUTLINE_CONFIRMED: "confirmed",
-            WorkflowStage.REACT_GENERATING: "generating",
-            WorkflowStage.REACT_COMPLETED: "generating",
-            WorkflowStage.SLIDEV_CONVERTING: "generating",
+            WorkflowStage.VUE_GENERATING: "generating",
+            WorkflowStage.VUE_COMPLETED: "generating",
+            WorkflowStage.SLIDEV_ASSEMBLING: "generating",
             WorkflowStage.COMPLETED: "completed",
             WorkflowStage.ERROR: "error",
         }
@@ -130,9 +133,9 @@ async def get_outline(session_id: str) -> OutlineResponse:
         WorkflowStage.INITIAL: "generating",
         WorkflowStage.OUTLINE_GENERATED: "draft",
         WorkflowStage.OUTLINE_CONFIRMED: "confirmed",
-        WorkflowStage.REACT_GENERATING: "generating",
-        WorkflowStage.REACT_COMPLETED: "generating",
-        WorkflowStage.SLIDEV_CONVERTING: "generating",
+        WorkflowStage.VUE_GENERATING: "generating",
+        WorkflowStage.VUE_COMPLETED: "generating",
+        WorkflowStage.SLIDEV_ASSEMBLING: "generating",
         WorkflowStage.COMPLETED: "completed",
         WorkflowStage.ERROR: "error",
     }
@@ -251,9 +254,9 @@ async def get_generation_status(session_id: str) -> SessionStatus:
         "initial": "pending",
         "outline_generated": "outline_ready",
         "outline_confirmed": "generating",
-        "react_generating": "generating",
-        "react_completed": "converting",
-        "slidev_converting": "converting",
+        "vue_generating": "generating",
+        "vue_completed": "assembling",
+        "slidev_assembling": "assembling",
         "completed": "completed",
         "error": "error",
     }
@@ -299,7 +302,7 @@ async def get_result(session_id: str) -> GenerationResult:
 
 
 @router.get("/export/{session_id}")
-async def export_slides(session_id: str) -> PlainTextResponse:
+async def export_slides(session_id: str, include_components: bool = False) -> Response:
     """Export slides.md file.
 
     Args:
@@ -316,10 +319,27 @@ async def export_slides(session_id: str) -> PlainTextResponse:
 
     slides_md = result.get("slides_md", "")
 
-    return PlainTextResponse(
-        content=slides_md,
-        media_type="text/markdown",
-        headers={"Content-Disposition": f"attachment; filename=slides-{session_id[:8]}.md"},
+    if not include_components:
+        return PlainTextResponse(
+            content=slides_md,
+            media_type="text/markdown",
+            headers={"Content-Disposition": f"attachment; filename=slides-{session_id[:8]}.md"},
+        )
+
+    components = result.get("components", [])
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("slides.md", slides_md)
+        for component in components:
+            name = component.get("name", "Component")
+            code = component.get("code", "")
+            archive.writestr(f"components/{name}.vue", code)
+
+    buffer.seek(0)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=slidev-{session_id[:8]}.zip"},
     )
 
 

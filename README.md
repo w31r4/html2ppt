@@ -6,7 +6,7 @@
 
 - **智能大纲生成** - AI自动分析需求，生成包含视觉建议和动画效果的结构化大纲
 - **人工审核编辑** - 支持Markdown编辑器实时调整大纲内容
-- **React组件生成** - 自动生成带动画效果的React组件
+- **Vue组件生成** - 自动生成带动画效果的Vue组件（.vue）
 - **Slidev格式导出** - 一键导出兼容Slidev的Markdown演示文稿
 - **多LLM后端支持** - 支持OpenAI、Google Gemini、Azure OpenAI等
 
@@ -19,7 +19,7 @@
 - LangChain - LLM集成
 
 **前端**
-- React 18 + TypeScript
+- React 18 + TypeScript（支持预览Vue组件）
 - Vite 6 - 构建工具
 - TailwindCSS - 样式框架
 - CodeMirror - Markdown编辑器
@@ -141,8 +141,8 @@ npm run dev
 
 1. **输入需求** - 在首页描述你的演示文稿需求
 2. **审核大纲** - AI生成大纲后，可以编辑调整内容
-3. **确认生成** - 确认大纲后开始生成React组件和Slidev格式
-4. **导出使用** - 下载生成的slides.md文件，在Slidev项目中使用
+3. **确认生成** - 确认大纲后开始生成Vue组件和Slidev格式
+4. **导出使用** - 下载生成的slides.md文件及.vue组件，在Slidev项目中使用
 
 ## 📁 项目结构
 

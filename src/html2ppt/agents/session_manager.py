@@ -305,12 +305,13 @@ class SessionManager:
                     "code": c.code,
                     "section_title": c.section_title,
                 }
-                for c in session.state.get("react_components", [])
+                for c in session.state.get("vue_components", [])
             ],
             "slides": [
                 {
                     "frontmatter": s.frontmatter,
                     "content": s.content,
+                    "component_name": s.component_name,
                 }
                 for s in session.state.get("slidev_slides", [])
             ],

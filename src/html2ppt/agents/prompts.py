@@ -106,7 +106,7 @@ OUTLINE_GENERATION_PROMPT = """你是一位专业的演示文稿设计师和动�
 
 """
 
-REACT_COMPONENT_PROMPT = """你是一位专业的React前端开发工程师和动画专家。根据提供的演示文稿页面设计，生成一个包含动画效果的React组件。
+VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画专家。根据提供的演示文稿页面设计，生成一个包含动画效果的Vue SFC组件。
 
 ## 页面设计
 
@@ -120,193 +120,40 @@ REACT_COMPONENT_PROMPT = """你是一位专业的React前端开发工程师和�
 
 ## 组件要求
 
-1. **技术栈**: TypeScript + React 函数组件 + TailwindCSS
+1. **技术栈**: Vue 3 SFC + UnoCSS (兼容Tailwind类)
 2. **尺寸**: 组件应适合16:9的幻灯片展示 (宽1920px, 高1080px 或等比缩放)
-3. **动画**: 使用CSS动画或Framer Motion风格的类名实现动画效果
+3. **动画**: 使用Slidev内置 `v-click`/`v-clicks` 指令表达动画顺序
 4. **背景**: 根据视觉建议实现渐变、图片或纯色背景
-5. **响应式**: 确保在不同尺寸下都能正确显示
+5. **简洁脚本**: 尽量避免`<script>`，如需使用只写`<script setup>`且不引入外部依赖
 
-## 动画实现指南
+## 示例组件
 
-使用以下CSS类实现常见动画效果：
+```vue
+<template>
+  <div class="relative flex flex-col items-center justify-center h-full overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900"></div>
 
-- **淡入**: `animate-fadeIn` (opacity 0 -> 1)
-- **从下滑入**: `animate-slideUp` (translateY 20px -> 0)
-- **从右滑入**: `animate-slideLeft` (translateX 20px -> 0)
-- **缩放弹入**: `animate-scaleIn` (scale 0.8 -> 1)
-- **打字机**: `animate-typewriter`
-- **闪烁高亮**: `animate-pulse`
-- **延迟**: 使用 `animation-delay-[Xms]` 类
-
-## 示例组件（带动画效果）
-
-```tsx
-import React from 'react';
-
-interface SlideProps {{
-  className?: string;
-}}
-
-const CoverSlide: React.FC<SlideProps> = ({{ className = '' }}) => {{
-  return (
-    <div className={{`relative flex flex-col items-center justify-center h-full overflow-hidden ${{className}}`}}>
-      {{/* 背景渐变 */}}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900" />
-      
-      {{/* 背景粒子效果 */}}
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute w-2 h-2 bg-white rounded-full animate-float" style={{{{ top: '20%', left: '10%' }}}} />
-        <div className="absolute w-3 h-3 bg-white rounded-full animate-float animation-delay-[1000ms]" style={{{{ top: '60%', left: '80%' }}}} />
-        <div className="absolute w-1 h-1 bg-white rounded-full animate-float animation-delay-[500ms]" style={{{{ top: '40%', left: '50%' }}}} />
-      </div>
-      
-      {{/* 内容区域 */}}
-      <div className="relative z-10 text-center px-16">
-        {{/* 主标题 - 淡入动画 */}}
-        <h1 className="text-6xl font-bold text-white mb-6 animate-fadeIn">
-          用 Go 构建 AI Agent 的"瑞士军刀"
-        </h1>
-        
-        {{/* 副标题 - 延迟滑入动画 */}}
-        <p className="text-2xl text-blue-200 animate-slideUp animation-delay-[300ms]">
-          深入解析模型上下文协议 (MCP)
-        </p>
-        
-        {{/* 演讲者信息 */}}
-        <p className="text-xl text-blue-300 mt-8 animate-fadeIn animation-delay-[600ms]">
-          演讲者：张三
-        </p>
-      </div>
-      
-      {{/* Logo */}}
-      <div className="absolute bottom-8 right-8 animate-fadeIn animation-delay-[800ms]">
-        <div className="w-16 h-16 bg-white/10 rounded-lg flex items-center justify-center">
-          <span className="text-white text-sm">LOGO</span>
-        </div>
-      </div>
+    <div class="relative z-10 text-center px-16">
+      <h1 class="text-6xl font-bold text-white mb-6" v-click>
+        用 Go 构建 AI Agent 的"瑞士军刀"
+      </h1>
+      <p class="text-2xl text-blue-200" v-click>
+        深入解析模型上下文协议 (MCP)
+      </p>
+      <p class="text-xl text-blue-300 mt-8" v-click>
+        演讲者：张三
+      </p>
     </div>
-  );
-}};
-
-export default CoverSlide;
-```
-
-## CSS动画定义（需要包含在组件或全局样式中）
-
-```css
-@keyframes fadeIn {{
-  from {{ opacity: 0; }}
-  to {{ opacity: 1; }}
-}}
-
-@keyframes slideUp {{
-  from {{ opacity: 0; transform: translateY(20px); }}
-  to {{ opacity: 1; transform: translateY(0); }}
-}}
-
-@keyframes slideLeft {{
-  from {{ opacity: 0; transform: translateX(20px); }}
-  to {{ opacity: 1; transform: translateX(0); }}
-}}
-
-@keyframes scaleIn {{
-  from {{ opacity: 0; transform: scale(0.8); }}
-  to {{ opacity: 1; transform: scale(1); }}
-}}
-
-@keyframes float {{
-  0%, 100% {{ transform: translateY(0); }}
-  50% {{ transform: translateY(-10px); }}
-}}
-
-.animate-fadeIn {{ animation: fadeIn 0.5s ease-out forwards; }}
-.animate-slideUp {{ animation: slideUp 0.5s ease-out forwards; }}
-.animate-slideLeft {{ animation: slideLeft 0.5s ease-out forwards; }}
-.animate-scaleIn {{ animation: scaleIn 0.5s ease-out forwards; }}
-.animate-float {{ animation: float 3s ease-in-out infinite; }}
+  </div>
+</template>
 ```
 
 ## 生成要求
 
-1. **完整代码**: 输出完整的TypeScript React组件代码
-2. **内联样式**: 复杂的自定义样式可以使用style属性
-3. **动画类**: 动画效果使用上述预定义的类名
+1. **完整代码**: 输出完整的Vue SFC代码
+2. **无外部依赖**: 不要引入第三方库或图片资源
+3. **可运行**: 确保`<template>`语法正确
 4. **无额外解释**: 只输出代码，不添加任何解释性文字
-5. **语法正确**: 确保代码可以直接使用
-"""
-
-SLIDEV_CONVERSION_PROMPT = """将以下React组件转换为Slidev兼容的Markdown格式，保留动画效果。
-
-## React组件代码
-
-```tsx
-{react_code}
-```
-
-## 转换规则
-
-1. **标题**: 提取组件中的标题，转换为Markdown标题
-2. **列表**: 提取列表项，转换为Markdown列表
-3. **动画**: 使用Slidev内置动画语法：
-   - `v-click` 指令实现点击显示
-   - `v-motion` 指令实现入场动画
-   - 使用 `<div v-click>` 包裹需要动画的元素
-4. **样式**: 保留背景和视觉效果，使用UnoCSS或CSS
-
-## Slidev动画语法
-
-```markdown
-<!-- 点击依次显示 -->
-<v-clicks>
-
-- 第一项
-- 第二项
-- 第三项
-
-</v-clicks>
-
-<!-- 入场动画 -->
-<div v-motion
-  :initial="{{ opacity: 0, y: 20 }}"
-  :enter="{{ opacity: 1, y: 0, transition: {{ delay: 300 }} }}">
-  内容
-</div>
-```
-
-## 示例输出
-
-```markdown
----
-layout: default
-class: bg-gradient-to-br from-blue-900 to-indigo-900
----
-
-# 章节标题
-
-<v-clicks>
-
-- 要点一
-- 要点二
-- 要点三
-
-</v-clicks>
-
-<style>
-h1 {{
-  @apply text-white text-5xl font-bold;
-}}
-li {{
-  @apply text-xl text-blue-100;
-}}
-</style>
-```
-
-## 生成要求
-
-- 直接输出Slidev Markdown格式
-- 不要包含```markdown代码块包裹
-- 保留动画效果，使用Slidev语法
-- 确保格式与Slidev兼容
 """
 
 
@@ -333,7 +180,7 @@ def get_outline_prompt(requirement: str, supplement: str | None = None) -> str:
     )
 
 
-def get_react_prompt(
+def get_vue_prompt(
     section_title: str,
     section_points: list[str] | None = None,
     speaker_notes: str | None = None,
@@ -341,7 +188,7 @@ def get_react_prompt(
     animation_effects: dict | None = None,
     raw_content: str | None = None,
 ) -> str:
-    """Generate React component prompt for a section with rich formatting.
+    """Generate Vue component prompt for a section with rich formatting.
 
     Args:
         section_title: Section title
@@ -391,21 +238,9 @@ def get_react_prompt(
     if speaker_notes:
         speaker_notes_section = f"### 演讲者备注\n\n{speaker_notes}"
 
-    return REACT_COMPONENT_PROMPT.format(
+    return VUE_COMPONENT_PROMPT.format(
         slide_content=slide_content,
         visual_suggestions=visual_section or "(无特定视觉建议)",
         animation_effects=animation_section or "(使用默认动画)",
         speaker_notes_section=speaker_notes_section,
     )
-
-
-def get_slidev_prompt(react_code: str) -> str:
-    """Generate Slidev conversion prompt.
-
-    Args:
-        react_code: React component code
-
-    Returns:
-        Formatted prompt string
-    """
-    return SLIDEV_CONVERSION_PROMPT.format(react_code=react_code)

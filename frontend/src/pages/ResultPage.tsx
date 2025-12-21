@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Copy, Check, Eye, Code, FileText, Loader2 } from 'lucide-react';
 import { getResult, getExportUrl, ApiError, GenerationResult } from '../api/client';
+import VuePreview from '../components/VuePreview';
 
 type TabType = 'preview' | 'markdown' | 'components';
 
@@ -62,9 +63,9 @@ export default function ResultPage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = (includeComponents = false) => {
     if (!sessionId) return;
-    window.open(getExportUrl(sessionId), '_blank');
+    window.open(getExportUrl(sessionId, includeComponents), '_blank');
   };
 
   if (loading) {
@@ -94,6 +95,10 @@ export default function ResultPage() {
   if (!result) {
     return null;
   }
+
+  const componentMap = new Map(
+    result.components.map((component) => [component.name, component.code])
+  );
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -132,11 +137,18 @@ export default function ResultPage() {
             )}
           </button>
           <button
-            onClick={handleDownload}
+            onClick={() => handleDownload(false)}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Download className="h-4 w-4" />
             下载 slides.md
+          </button>
+          <button
+            onClick={() => handleDownload(true)}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            下载组件包
           </button>
         </div>
       </div>
@@ -175,7 +187,7 @@ export default function ResultPage() {
             }`}
           >
             <Code className="h-4 w-4" />
-            React组件
+            Vue组件
           </button>
         </nav>
       </div>
@@ -196,16 +208,23 @@ export default function ResultPage() {
                     </span>
                   </div>
                   <div className="p-6 bg-white aspect-video flex items-center justify-center">
-                    <div
-                      className="prose max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: slide.content
-                          .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
-                          .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
-                          .replace(/^-\s+(.+)$/gm, '<li>$1</li>')
-                          .replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>'),
-                      }}
-                    />
+                    {slide.component_name && componentMap.has(slide.component_name) ? (
+                      <VuePreview
+                        code={componentMap.get(slide.component_name) || ''}
+                        className="h-full w-full"
+                      />
+                    ) : (
+                      <div
+                        className="prose max-w-none"
+                        dangerouslySetInnerHTML={{
+                          __html: slide.content
+                            .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
+                            .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
+                            .replace(/^-\s+(.+)$/gm, '<li>$1</li>')
+                            .replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>'),
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
@@ -253,7 +272,7 @@ export default function ResultPage() {
                 <div>
                   <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
                     <span className="text-sm font-medium text-gray-700">
-                      {result.components[selectedComponent].name}.tsx
+                      {result.components[selectedComponent].name}.vue
                     </span>
                   </div>
                   <pre className="p-4 overflow-auto max-h-[500px] text-sm font-mono bg-gray-900 text-gray-100">
@@ -293,6 +312,12 @@ export default function ResultPage() {
           <li className="flex gap-3">
             <span className="flex-shrink-0 w-6 h-6 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-medium">
               4
+            </span>
+            <span>将生成的 .vue 组件放到项目的 components/ 目录中</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex-shrink-0 w-6 h-6 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-medium">
+              5
             </span>
             <span>
               运行开发服务器：<code className="bg-gray-200 px-1.5 py-0.5 rounded text-sm">npm run dev</code>

@@ -36,19 +36,25 @@
 - [x] 3.2.4 实现大纲模板格式验证
 - [x] 3.2.5 实现增补需求合并逻辑
 
-### 3.3 React生成节点
-- [x] 3.3.1 实现React生成节点函数
-- [x] 3.3.2 设计React组件生成Prompt模板
-- [x] 3.3.3 实现大纲到组件的映射逻辑
-- [x] 3.3.4 实现生成代码验证
+### 3.3 Vue生成节点
+- [ ] 3.3.1 实现Vue SFC生成节点函数
+- [ ] 3.3.2 设计Vue SFC生成Prompt模板
+- [ ] 3.3.3 实现大纲到组件的映射逻辑
+- [ ] 3.3.4 实现生成代码验证（Vue SFC）
 - [ ] 3.3.5 实现代码自动修复逻辑
 
-### 3.4 Slidev转换节点
-- [x] 3.4.1 实现Slidev转换节点函数
-- [x] 3.4.2 实现React组件解析器
-- [x] 3.4.3 实现JSX到Markdown转换器
-- [x] 3.4.4 实现Slidev frontmatter生成器
-- [x] 3.4.5 实现slides.md文件生成
+### 3.4 Slidev组装节点
+- [ ] 3.4.1 实现Slidev Markdown组装节点函数
+- [ ] 3.4.2 实现Markdown片段按序拼接
+- [ ] 3.4.3 实现组件引用注入（<ComponentName />）
+- [ ] 3.4.4 实现Slidev frontmatter生成器
+- [ ] 3.4.5 实现slides.md文件生成
+
+### 3.5 异步批量生成
+- [ ] 3.5.1 支持按页并发生成Vue组件
+- [ ] 3.5.2 支持按页并发生成Markdown片段
+- [ ] 3.5.3 更新进度计算与状态回写
+- [ ] 3.5.4 实现单页失败重试与降级策略
 
 ## 4. 多LLM后端集成
 
@@ -63,8 +69,8 @@
 ## 5. 格式转换器
 
 - [x] 5.1 实现Markdown大纲解析器（src/converters/outline_parser.py）- 集成在state.py中
-- [x] 5.2 实现React组件分解器（src/converters/component_splitter.py）- 集成在workflow.py中
-- [x] 5.3 实现Slidev格式转换器（src/converters/slidev_converter.py）- 集成在workflow.py中
+- [ ] 5.2 实现Vue组件生成器（按页输出SFC）
+- [ ] 5.3 实现Slidev Markdown组装器（按页增量拼接）
 - [ ] 5.4 实现项目打包器（生成完整Slidev项目zip）
 
 ## 6. 前端界面
@@ -81,6 +87,8 @@
 - [x] 6.2.3 实现生成进度页面
 - [x] 6.2.4 实现结果预览页面
 - [x] 6.2.5 实现设置页面（API密钥配置）
+- [ ] 6.2.6 实现Vue组件预览（.vue渲染）
+- [ ] 6.2.7 实现按页增量结果与进度展示
 
 ### 6.3 通用组件
 - [x] 6.3.1 实现Markdown编辑器组件（使用CodeMirror）
@@ -102,3 +110,5 @@
 - [ ] 8.2 编写API文档
 - [ ] 8.3 创建Docker配置文件
 - [ ] 8.4 编写部署指南
+- [ ] 8.5 更新Prompt与示例（Vue/Slidev输出）
+- [ ] 8.6 更新导出与预览说明（slides.md + .vue）

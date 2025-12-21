@@ -1,49 +1,30 @@
 ## ADDED Requirements
 
-### Requirement: React组件分解
-系统 SHALL 将生成的React组件代码分解为独立的页面单元。
-
-#### Scenario: 识别组件边界
-- **WHEN** 处理生成的React代码
-- **THEN** 系统应识别每个独立的函数组件
-- **AND** 提取组件的内容和样式
-
-#### Scenario: 提取组件元数据
-- **WHEN** 分解组件时
-- **THEN** 应提取组件名称、props定义和JSX结构
-- **AND** 保留组件间的顺序关系
-
-### Requirement: Slidev Markdown格式转换
-系统 SHALL 将分解后的React组件转换为Slidev兼容的Markdown格式。
+### Requirement: Slidev Markdown生成
+系统 SHALL 生成Slidev兼容的Markdown内容。
 
 #### Scenario: 生成slide分隔符
-- **WHEN** 转换多个组件为slides
+- **WHEN** 生成多个slides
 - **THEN** 每个slide之间应使用三个短横线分隔
 - **AND** 第一个slide前不需要分隔符
 
-#### Scenario: 转换JSX到Markdown
-- **WHEN** 处理JSX内容
-- **THEN** 应将标题元素转换为Markdown标题
-- **AND** 将列表元素转换为Markdown列表
-- **AND** 将文本内容保留为纯文本
+#### Scenario: 全局与单页frontmatter
+- **WHEN** 生成`slides.md`
+- **THEN** 文件开头应包含全局frontmatter
+- **AND** 需要特殊布局时为单页生成frontmatter
 
-#### Scenario: 样式转换处理
-- **WHEN** 处理TailwindCSS样式
-- **THEN** 应转换为Slidev支持的内联样式或UnoCSS类
-- **AND** 保留布局和排版效果
+### Requirement: Vue组件引用
+系统 SHALL 在Slidev Markdown中引用生成的Vue组件。
 
-### Requirement: Slidev Frontmatter生成
-系统 SHALL 为生成的slides添加适当的Slidev frontmatter配置。
+#### Scenario: 组件引用注入
+- **WHEN** 某页包含复杂布局或交互
+- **THEN** slides内容应包含对应的`<ComponentName />`标签
+- **AND** 组件名与生成的`.vue`文件保持一致
 
-#### Scenario: 全局frontmatter
-- **WHEN** 生成slides.md文件
-- **THEN** 文件开头应包含全局frontmatter配置
-- **AND** 配置应包含theme、title等基本信息
-
-#### Scenario: 单页frontmatter
-- **WHEN** 某个slide需要特殊布局或配置
-- **THEN** 该slide应有独立的frontmatter块
-- **AND** 支持layout、class等常用属性
+#### Scenario: 组件目录约定
+- **WHEN** 输出`.vue`文件
+- **THEN** 应使用Slidev默认的`components/`目录
+- **AND** 组件应可被Slidev自动注册
 
 ### Requirement: Slidev语法兼容性
 系统生成的Markdown SHALL 完全兼容Slidev语法规范。
@@ -63,20 +44,20 @@
 - **THEN** 应支持基本的v-click动画指令
 - **AND** 支持slide过渡效果配置
 
-### Requirement: Slidev项目输出
-系统 SHALL 输出完整可运行的Slidev项目结构。
+### Requirement: 输出与导出
+系统 SHALL 输出完整可运行的Slidev内容。
 
 #### Scenario: 生成slides.md主文件
-- **WHEN** 转换完成
-- **THEN** 应生成包含所有slides的slides.md文件
-- **AND** 文件应可直接被Slidev解析
+- **WHEN** 生成完成
+- **THEN** 应输出包含所有slides的`slides.md`
+- **AND** 文件可直接被Slidev解析
+
+#### Scenario: 生成Vue组件文件
+- **WHEN** 组件生成完成
+- **THEN** 应输出对应的`.vue`文件
+- **AND** 可与`slides.md`配合直接运行
 
 #### Scenario: 导出下载功能
 - **WHEN** 用户请求导出
-- **THEN** 系统应提供slides.md文件下载
-- **AND** 可选择包含package.json等项目配置文件
-
-#### Scenario: Slidev预览集成
-- **WHEN** 用户请求在线预览
-- **THEN** 系统应启动Slidev开发服务器
-- **AND** 提供预览链接给用户
+- **THEN** 系统应提供`slides.md`与`.vue`文件下载
+- **AND** 可选择包含项目配置文件

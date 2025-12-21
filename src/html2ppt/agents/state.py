@@ -13,9 +13,9 @@ class WorkflowStage(str, Enum):
     INITIAL = "initial"
     OUTLINE_GENERATED = "outline_generated"
     OUTLINE_CONFIRMED = "outline_confirmed"
-    REACT_GENERATING = "react_generating"
-    REACT_COMPLETED = "react_completed"
-    SLIDEV_CONVERTING = "slidev_converting"
+    VUE_GENERATING = "vue_generating"
+    VUE_COMPLETED = "vue_completed"
+    SLIDEV_ASSEMBLING = "slidev_assembling"
     COMPLETED = "completed"
     ERROR = "error"
 
@@ -285,11 +285,11 @@ class Outline(BaseModel):
         return "\n".join(lines)
 
 
-class ReactComponent(BaseModel):
-    """A generated React component for a slide."""
+class VueComponent(BaseModel):
+    """A generated Vue component for a slide."""
 
     name: str = Field(..., description="Component name")
-    code: str = Field(..., description="React component code (TSX)")
+    code: str = Field(..., description="Vue component code (SFC)")
     section_title: str = Field(..., description="Original section title")
 
 
@@ -298,6 +298,7 @@ class SlidevSlide(BaseModel):
 
     frontmatter: dict = Field(default_factory=dict, description="Slide frontmatter")
     content: str = Field(..., description="Markdown content")
+    component_name: Optional[str] = Field(None, description="Optional referenced Vue component name")
 
 
 class WorkflowState(TypedDict):
@@ -323,11 +324,11 @@ class WorkflowState(TypedDict):
     outline: Optional[Outline]
     outline_history: list[str]  # Previous versions for undo
 
-    # React generation
-    react_components: list[ReactComponent]
+    # Vue generation
+    vue_components: list[VueComponent]
     current_generating_index: int
 
-    # Slidev conversion
+    # Slidev assembly
     slidev_slides: list[SlidevSlide]
     slides_md: Optional[str]
 
@@ -360,7 +361,7 @@ def create_initial_state(
         outline_markdown=None,
         outline=None,
         outline_history=[],
-        react_components=[],
+        vue_components=[],
         current_generating_index=0,
         slidev_slides=[],
         slides_md=None,
@@ -411,35 +412,35 @@ def confirm_outline(state: WorkflowState) -> dict:
     }
 
 
-def add_react_component(
+def add_vue_component(
     state: WorkflowState,
-    component: ReactComponent,
+    component: VueComponent,
 ) -> dict:
-    """Add a generated React component.
+    """Add a generated Vue component.
 
     Args:
         state: Current state
-        component: New React component
+        component: New Vue component
 
     Returns:
         State update dict
     """
-    components = list(state.get("react_components", []))
+    components = list(state.get("vue_components", []))
     components.append(component)
 
     total_sections = len(state.get("outline", Outline(title="", sections=[], raw_markdown="")).sections)
     progress = len(components) / max(total_sections, 1)
 
     return {
-        "react_components": components,
+        "vue_components": components,
         "current_generating_index": len(components),
-        "progress": min(progress * 0.8, 0.8),  # Reserve 20% for Slidev conversion
-        "stage": WorkflowStage.REACT_GENERATING,
+        "progress": min(progress * 0.8, 0.8),  # Reserve 20% for Slidev assembly
+        "stage": WorkflowStage.VUE_GENERATING,
     }
 
 
-def set_react_completed(state: WorkflowState) -> dict:
-    """Mark React generation as completed.
+def set_vue_completed(state: WorkflowState) -> dict:
+    """Mark Vue generation as completed.
 
     Args:
         state: Current state
@@ -448,7 +449,7 @@ def set_react_completed(state: WorkflowState) -> dict:
         State update dict
     """
     return {
-        "stage": WorkflowStage.REACT_COMPLETED,
+        "stage": WorkflowStage.VUE_COMPLETED,
         "progress": 0.8,
     }
 

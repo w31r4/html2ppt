@@ -16,19 +16,19 @@ const STAGES: StageInfo[] = [
     description: '大纲已确认，准备生成',
   },
   {
-    key: 'react_generating',
-    label: '生成React组件',
-    description: '正在为每个章节生成React组件...',
+    key: 'vue_generating',
+    label: '生成Vue组件',
+    description: '正在为每个章节生成Vue组件...',
   },
   {
-    key: 'react_completed',
-    label: 'React组件完成',
+    key: 'vue_completed',
+    label: 'Vue组件完成',
     description: '所有组件已生成',
   },
   {
-    key: 'slidev_converting',
-    label: '转换Slidev格式',
-    description: '正在将组件转换为Slidev Markdown...',
+    key: 'slidev_assembling',
+    label: '组装Slidev',
+    description: '正在生成Slidev Markdown...',
   },
   {
     key: 'completed',

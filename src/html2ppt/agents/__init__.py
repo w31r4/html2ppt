@@ -3,13 +3,12 @@
 from html2ppt.agents.llm_factory import create_llm, LLMFactory
 from html2ppt.agents.prompts import (
     get_outline_prompt,
-    get_react_prompt,
-    get_slidev_prompt,
+    get_vue_prompt,
 )
 from html2ppt.agents.state import (
     Outline,
     OutlineSection,
-    ReactComponent,
+    VueComponent,
     SlidevSlide,
     WorkflowStage,
     WorkflowState,
@@ -23,12 +22,11 @@ __all__ = [
     "LLMFactory",
     # Prompts
     "get_outline_prompt",
-    "get_react_prompt",
-    "get_slidev_prompt",
+    "get_vue_prompt",
     # State
     "Outline",
     "OutlineSection",
-    "ReactComponent",
+    "VueComponent",
     "SlidevSlide",
     "WorkflowStage",
     "WorkflowState",

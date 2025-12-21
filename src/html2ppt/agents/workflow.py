@@ -1,5 +1,6 @@
 """LangGraph workflow for presentation generation."""
 
+import asyncio
 import re
 from typing import Literal
 
@@ -8,17 +9,16 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from html2ppt.agents.llm_factory import create_llm
-from html2ppt.agents.prompts import get_outline_prompt, get_react_prompt, get_slidev_prompt
+from html2ppt.agents.prompts import get_outline_prompt, get_vue_prompt
 from html2ppt.agents.state import (
     Outline,
-    ReactComponent,
+    OutlineSection,
     SlidevSlide,
+    VueComponent,
     WorkflowStage,
     WorkflowState,
-    add_react_component,
     confirm_outline,
     set_error,
-    set_react_completed,
     set_slidev_result,
     update_outline,
 )
@@ -54,7 +54,7 @@ def _extract_code_block(text: str, language: str = "") -> str:
 
 
 def _sanitize_component_name(title: str) -> str:
-    """Convert section title to valid React component name.
+    """Convert section title to valid Vue component name.
 
     Args:
         title: Section title
@@ -98,8 +98,8 @@ class PresentationWorkflow:
         # Add nodes
         graph.add_node("generate_outline", self._generate_outline_node)
         graph.add_node("human_review", self._human_review_node)
-        graph.add_node("generate_react", self._generate_react_node)
-        graph.add_node("convert_slidev", self._convert_slidev_node)
+        graph.add_node("generate_vue", self._generate_vue_node)
+        graph.add_node("assemble_slidev", self._assemble_slidev_node)
 
         # Add edges
         graph.add_edge(START, "generate_outline")
@@ -111,12 +111,12 @@ class PresentationWorkflow:
             self._route_after_review,
             {
                 "regenerate": "generate_outline",
-                "continue": "generate_react",
+                "continue": "generate_vue",
             },
         )
 
-        graph.add_edge("generate_react", "convert_slidev")
-        graph.add_edge("convert_slidev", END)
+        graph.add_edge("generate_vue", "assemble_slidev")
+        graph.add_edge("assemble_slidev", END)
 
         return graph
 
@@ -211,8 +211,8 @@ class PresentationWorkflow:
 
         return "continue"
 
-    async def _generate_react_node(self, state: WorkflowState) -> dict:
-        """Generate React components for each section.
+    async def _generate_vue_node(self, state: WorkflowState) -> dict:
+        """Generate Vue components for each section.
 
         Args:
             state: Current workflow state
@@ -221,9 +221,11 @@ class PresentationWorkflow:
             State update with generated components
         """
         logger.info(
-            "Generating React components",
+            "Generating Vue components",
             session_id=state["session_id"],
         )
+
+        state["stage"] = WorkflowStage.VUE_GENERATING
 
         outline = state.get("outline")
         if not outline:
@@ -231,84 +233,110 @@ class PresentationWorkflow:
             outline_md = state.get("outline_markdown", "")
             outline = Outline.from_markdown(outline_md)
 
-        components: list[ReactComponent] = []
+        components: list[VueComponent] = []
         total_sections = len(outline.sections)
 
+        if total_sections == 0:
+            return set_error(state, "大纲为空，无法生成组件")
+
         try:
-            for i, section in enumerate(outline.sections):
-                logger.info(
-                    "Generating component",
-                    session_id=state["session_id"],
-                    section=section.title,
-                    progress=f"{i + 1}/{total_sections}",
-                )
+            semaphore = asyncio.Semaphore(4)
+            used_names: set[str] = set()
+            component_names: list[str] = []
+            for index, section in enumerate(outline.sections):
+                base_name = _sanitize_component_name(section.title)
+                name = base_name or "Slide"
+                if name in used_names:
+                    name = f"{name}{index + 1}"
+                used_names.add(name)
+                component_names.append(f"{name}Slide")
 
-                # Extract visual suggestions and animation effects
-                visual_dict = None
-                if section.visual_suggestions:
-                    visual_dict = {
-                        "background": section.visual_suggestions.background,
-                        "core_image": section.visual_suggestions.core_image,
-                        "layout": section.visual_suggestions.layout,
-                        "image_url": section.visual_suggestions.image_url,
-                    }
+            async def generate_component(index: int, section: OutlineSection) -> tuple[int, VueComponent]:
+                async with semaphore:
+                    logger.info(
+                        "Generating component",
+                        session_id=state["session_id"],
+                        section=section.title,
+                        progress=f"{index + 1}/{total_sections}",
+                    )
 
-                animation_dict = None
-                if section.animation_effects:
-                    animation_dict = {
-                        "description": section.animation_effects.description,
-                        "elements": section.animation_effects.elements,
-                    }
+                    # Extract visual suggestions and animation effects
+                    visual_dict = None
+                    if section.visual_suggestions:
+                        visual_dict = {
+                            "background": section.visual_suggestions.background,
+                            "core_image": section.visual_suggestions.core_image,
+                            "layout": section.visual_suggestions.layout,
+                            "image_url": section.visual_suggestions.image_url,
+                        }
 
-                prompt = get_react_prompt(
-                    section_title=section.title,
-                    section_points=section.points,
-                    speaker_notes=section.speaker_notes,
-                    visual_suggestions=visual_dict,
-                    animation_effects=animation_dict,
-                    raw_content=section.raw_content,
-                )
+                    animation_dict = None
+                    if section.animation_effects:
+                        animation_dict = {
+                            "description": section.animation_effects.description,
+                            "elements": section.animation_effects.elements,
+                        }
 
-                messages = [
-                    SystemMessage(
-                        content="你是一位专业的React前端开发工程师和动画专家，擅长创建美观且富有动感的演示文稿组件。"
-                    ),
-                    HumanMessage(content=prompt),
-                ]
+                    prompt = get_vue_prompt(
+                        section_title=section.title,
+                        section_points=section.points,
+                        speaker_notes=section.speaker_notes,
+                        visual_suggestions=visual_dict,
+                        animation_effects=animation_dict,
+                        raw_content=section.raw_content,
+                    )
 
-                response = await self.llm.ainvoke(messages)
-                code = _extract_code_block(response.content, "tsx")
+                    messages = [
+                        SystemMessage(
+                            content="你是一位专业的Vue前端开发工程师和动画专家，擅长创建美观且富有动感的演示文稿组件。"
+                        ),
+                        HumanMessage(content=prompt),
+                    ]
 
-                component_name = _sanitize_component_name(section.title)
-                component = ReactComponent(
-                    name=f"{component_name}Slide",
-                    code=code,
-                    section_title=section.title,
-                )
-                components.append(component)
+                    response = await self.llm.ainvoke(messages)
+                    code = _extract_code_block(response.content, "vue")
+
+                    component = VueComponent(
+                        name=component_names[index],
+                        code=code,
+                        section_title=section.title,
+                    )
+                    return index, component
+
+            tasks = [
+                asyncio.create_task(generate_component(i, section))
+                for i, section in enumerate(outline.sections)
+            ]
+
+            results: list[VueComponent | None] = [None] * total_sections
+            for task in asyncio.as_completed(tasks):
+                index, component = await task
+                results[index] = component
+
+            components = [c for c in results if c is not None]
 
             logger.info(
-                "React components generated",
+                "Vue components generated",
                 session_id=state["session_id"],
                 count=len(components),
             )
 
             return {
-                "react_components": components,
-                "stage": WorkflowStage.REACT_COMPLETED,
+                "vue_components": components,
+                "stage": WorkflowStage.VUE_COMPLETED,
                 "progress": 0.8,
             }
 
         except Exception as e:
             logger.error(
-                "React generation failed",
+                "Vue generation failed",
                 session_id=state["session_id"],
                 error=str(e),
             )
-            return set_error(state, f"React组件生成失败: {e!s}")
+            return set_error(state, f"Vue组件生成失败: {e!s}")
 
-    async def _convert_slidev_node(self, state: WorkflowState) -> dict:
-        """Convert React components to Slidev format.
+    async def _assemble_slidev_node(self, state: WorkflowState) -> dict:
+        """Assemble Slidev markdown from Vue components.
 
         Args:
             state: Current workflow state
@@ -317,13 +345,15 @@ class PresentationWorkflow:
             State update with Slidev slides
         """
         logger.info(
-            "Converting to Slidev",
+            "Assembling Slidev markdown",
             session_id=state["session_id"],
         )
 
-        components = state.get("react_components", [])
+        state["stage"] = WorkflowStage.SLIDEV_ASSEMBLING
+
+        components = state.get("vue_components", [])
         if not components:
-            return set_error(state, "没有可转换的React组件")
+            return set_error(state, "没有可组装的Vue组件")
 
         slides: list[SlidevSlide] = []
         outline = state.get("outline")
@@ -341,28 +371,12 @@ class PresentationWorkflow:
             )
             slides.append(title_slide)
 
-            # Convert each component
+            # Assemble each component
             for component in components:
-                prompt = get_slidev_prompt(component.code)
-
-                messages = [
-                    SystemMessage(content="你是Slidev格式专家，擅长将React组件转换为Slidev Markdown。"),
-                    HumanMessage(content=prompt),
-                ]
-
-                response = await self.llm.ainvoke(messages)
-                slide_content = response.content.strip()
-
-                # Remove markdown code block if present
-                slide_content = _extract_code_block(slide_content, "markdown")
-                if slide_content.startswith("```"):
-                    slide_content = slide_content.split("\n", 1)[1] if "\n" in slide_content else ""
-                if slide_content.endswith("```"):
-                    slide_content = slide_content.rsplit("```", 1)[0]
-
                 slide = SlidevSlide(
                     frontmatter={"layout": "default"},
-                    content=slide_content.strip(),
+                    content=f"<{component.name} />",
+                    component_name=component.name,
                 )
                 slides.append(slide)
 
@@ -370,7 +384,7 @@ class PresentationWorkflow:
             slides_md = self._assemble_slides_md(slides)
 
             logger.info(
-                "Slidev conversion completed",
+                "Slidev assembly completed",
                 session_id=state["session_id"],
                 slides_count=len(slides),
             )
@@ -379,11 +393,11 @@ class PresentationWorkflow:
 
         except Exception as e:
             logger.error(
-                "Slidev conversion failed",
+                "Slidev assembly failed",
                 session_id=state["session_id"],
                 error=str(e),
             )
-            return set_error(state, f"Slidev转换失败: {e!s}")
+            return set_error(state, f"Slidev组装失败: {e!s}")
 
     def _assemble_slides_md(self, slides: list[SlidevSlide]) -> str:
         """Assemble slides into a complete slides.md file.

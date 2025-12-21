@@ -57,6 +57,11 @@
 - **THEN** 应提供可展开的详细日志面板
 - **AND** 实时更新日志内容
 
+#### Scenario: 轮询状态更新
+- **WHEN** 生成进行中
+- **THEN** 前端应通过轮询获取最新状态
+- **AND** 轮询间隔应可配置
+
 ### Requirement: 结果预览界面
 系统 SHALL 提供生成结果的预览功能。
 
@@ -67,8 +72,13 @@
 
 #### Scenario: 代码查看模式
 - **WHEN** 用户选择查看源码
-- **THEN** 应显示生成的Slidev Markdown代码
+- **THEN** 应显示生成的Slidev Markdown代码与Vue组件源码
 - **AND** 提供语法高亮
+
+#### Scenario: Vue组件预览
+- **WHEN** 用户切换到组件预览
+- **THEN** 应渲染生成的`.vue`组件
+- **AND** 支持按页切换预览
 
 ### Requirement: 导出下载界面
 系统 SHALL 提供便捷的导出和下载功能。

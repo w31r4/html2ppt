@@ -36,6 +36,7 @@ export interface GenerationResult {
   slides: Array<{
     frontmatter: Record<string, unknown>;
     content: string;
+    component_name?: string;
   }>;
 }
 
@@ -152,8 +153,9 @@ export async function getResult(sessionId: string): Promise<GenerationResult> {
   }
 }
 
-export function getExportUrl(sessionId: string): string {
-  return `${API_BASE_URL}/export/${sessionId}`;
+export function getExportUrl(sessionId: string, includeComponents = false): string {
+  const suffix = includeComponents ? '?include_components=true' : '';
+  return `${API_BASE_URL}/export/${sessionId}${suffix}`;
 }
 
 export async function getLLMSettings(): Promise<LLMSettings> {
