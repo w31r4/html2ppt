@@ -27,6 +27,7 @@ class Session:
     state: WorkflowState
     workflow: Optional[PresentationWorkflow] = None
     thread_config: dict = field(default_factory=dict)
+    started: bool = False  # Track if workflow has been started
 
 
 class SessionManager:
@@ -109,9 +110,13 @@ class SessionManager:
         compiled = session.workflow.compile()
 
         try:
+            # Determine input: initial state for first run, None for resume
+            input_data = None if session.started else session.state
+            session.started = True
+
             # Run the graph
             async for event in compiled.astream(
-                session.state,
+                input_data,
                 session.thread_config,
                 stream_mode="updates",
             ):
@@ -216,14 +221,15 @@ class SessionManager:
 
         return True
 
-    async def confirm_outline(self, session_id: str) -> bool:
+    async def confirm_outline(self, session_id: str, run_background: bool = True) -> bool:
         """Confirm outline and continue workflow.
 
         Args:
             session_id: Session ID
+            run_background: If True, start workflow in background (don't wait)
 
         Returns:
-            True if confirmed and workflow resumed
+            True if confirmed successfully
         """
         session = self.get_session(session_id)
         if not session:
@@ -234,8 +240,14 @@ class SessionManager:
 
         logger.info("Outline confirmed", session_id=session_id)
 
-        # Resume workflow
-        await self._run_until_interrupt(session)
+        if run_background:
+            # Start workflow in background task
+            import asyncio
+
+            asyncio.create_task(self._run_until_interrupt(session))
+        else:
+            # Resume workflow synchronously (for testing)
+            await self._run_until_interrupt(session)
 
         return True
 
