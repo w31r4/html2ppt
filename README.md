@@ -51,14 +51,41 @@ docker compose up -d
 # 查看日志
 docker compose logs -f
 
+# 单独查看前端/后端日志
+docker compose logs -f frontend
+docker compose logs -f backend
+
 # 停止服务
 docker compose down
 
 # 重新构建并启动
 docker compose up -d --build
 
+# 单独重建某个服务
+docker compose up -d --build frontend
+docker compose up -d --build backend
+
 # 查看数据卷
 docker volume ls | grep html2ppt
+```
+
+**架构说明：**
+
+```
+┌─────────────────────────────────────────────────┐
+│              docker-compose                      │
+│  ┌──────────────────┐  ┌──────────────────┐     │
+│  │    frontend      │  │     backend      │     │
+│  │  Nginx :80       │──│  FastAPI :8000   │     │
+│  │  静态文件+反代    │  │    纯API服务      │     │
+│  └──────────────────┘  └──────────────────┘     │
+│          │                      │               │
+│          └──────────┬───────────┘               │
+│                 volumes                          │
+│           data/    output/                       │
+└─────────────────────────────────────────────────┘
+          ↑
+     :8912 端口
 ```
 
 ---
@@ -187,6 +214,9 @@ npm run dev
 
 ```
 html2ppt/
+├── Dockerfile              # 后端 Docker 构建文件
+├── docker-compose.yml      # Docker Compose 编排文件
+├── .dockerignore           # Docker 构建忽略文件
 ├── src/html2ppt/           # 后端源码
 │   ├── agents/             # LangGraph工作流
 │   │   ├── workflow.py     # 主工作流定义
@@ -198,6 +228,9 @@ html2ppt/
 │   │   └── routes/         # API路由
 │   └── config/             # 配置管理
 ├── frontend/               # 前端源码
+│   ├── Dockerfile          # 前端 Docker 构建文件
+│   ├── nginx.conf          # Nginx 配置（反向代理）
+│   ├── .dockerignore       # 前端 Docker 忽略文件
 │   ├── src/
 │   │   ├── pages/          # 页面组件
 │   │   ├── components/     # 通用组件
