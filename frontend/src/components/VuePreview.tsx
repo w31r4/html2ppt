@@ -111,8 +111,10 @@ export default function VuePreview({ code, className = '' }: VuePreviewProps) {
       }
 
       let scriptExports: Record<string, unknown> = {};
+      let bindingMetadata: Record<string, unknown> | undefined;
       if (descriptor.script || descriptor.scriptSetup) {
         const script = compileScript(descriptor, { id: 'preview' });
+        bindingMetadata = script.bindings as Record<string, unknown>;
         const scriptCode = normalizeImports(script.content)
           .replace(/export default/g, 'return')
           .replace(/export const /g, 'const ')
@@ -128,6 +130,7 @@ export default function VuePreview({ code, className = '' }: VuePreviewProps) {
         id: 'preview',
         compilerOptions: {
           isCustomElement: (tag) => tag.startsWith('v-'),
+          bindingMetadata,
         },
       });
 

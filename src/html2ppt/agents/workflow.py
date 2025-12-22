@@ -363,17 +363,7 @@ class PresentationWorkflow:
         outline = state.get("outline")
 
         try:
-            # Generate title slide
             title = outline.title if outline else "Presentation"
-            title_slide = SlidevSlide(
-                frontmatter={
-                    "theme": "default",
-                    "title": title,
-                    "layout": "cover",
-                },
-                content=f"# {title}\n\n演示文稿",
-            )
-            slides.append(title_slide)
 
             # Assemble each component
             for component in components:
@@ -385,7 +375,13 @@ class PresentationWorkflow:
                 slides.append(slide)
 
             # Assemble slides.md
-            slides_md = self._assemble_slides_md(slides)
+            slides_md = self._assemble_slides_md(
+                slides,
+                global_frontmatter={
+                    "theme": "default",
+                    "title": title,
+                },
+            )
 
             logger.info(
                 "Slidev assembly completed",
@@ -403,16 +399,28 @@ class PresentationWorkflow:
             )
             return set_error(state, f"Slidev组装失败: {e!s}")
 
-    def _assemble_slides_md(self, slides: list[SlidevSlide]) -> str:
+    def _assemble_slides_md(
+        self,
+        slides: list[SlidevSlide],
+        global_frontmatter: dict | None = None,
+    ) -> str:
         """Assemble slides into a complete slides.md file.
 
         Args:
             slides: List of SlidevSlide objects
+            global_frontmatter: Optional deck-level frontmatter
 
         Returns:
             Complete slides.md content
         """
         parts = []
+
+        if global_frontmatter:
+            frontmatter_lines = ["---"]
+            for key, value in global_frontmatter.items():
+                frontmatter_lines.append(f"{key}: {value}")
+            frontmatter_lines.append("---")
+            parts.append("\n".join(frontmatter_lines))
 
         for i, slide in enumerate(slides):
             # Build frontmatter

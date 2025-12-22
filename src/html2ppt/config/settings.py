@@ -93,6 +93,10 @@ class Settings(BaseSettings):
         default=Path("output"),
         description="Output directory for generated files",
     )
+    auto_save_output: bool = Field(
+        default=True,
+        description="Automatically save slides.md and components after completion",
+    )
 
     def get_llm_config(self) -> LLMConfig:
         """Convert flat settings to LLMConfig object."""

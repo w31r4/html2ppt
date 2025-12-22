@@ -28,6 +28,7 @@ class Session:
     workflow: Optional[PresentationWorkflow] = None
     thread_config: dict = field(default_factory=dict)
     started: bool = False  # Track if workflow has been started
+    output_saved: bool = False
 
 
 class SessionManager:
@@ -125,6 +126,8 @@ class SessionManager:
                     if isinstance(updates, dict):
                         session.state.update(updates)
 
+                self._maybe_save_output(session)
+
                 logger.debug(
                     "Workflow update",
                     session_id=session.session_id,
@@ -139,6 +142,56 @@ class SessionManager:
             )
             session.state["error"] = str(e)
             session.state["stage"] = WorkflowStage.ERROR
+
+    def _maybe_save_output(self, session: Session) -> None:
+        settings = get_settings()
+        if not settings.auto_save_output or session.output_saved:
+            return
+
+        stage = session.state.get("stage")
+        if stage != WorkflowStage.COMPLETED and str(stage) != WorkflowStage.COMPLETED.value:
+            return
+
+        slides_md = session.state.get("slides_md")
+        if not slides_md:
+            logger.warning(
+                "Auto-save skipped: slides.md missing",
+                session_id=session.session_id,
+            )
+            return
+
+        output_dir = settings.output_dir / session.session_id
+        try:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / "slides.md").write_text(slides_md, encoding="utf-8")
+
+            components = session.state.get("vue_components", [])
+            if components:
+                components_dir = output_dir / "components"
+                components_dir.mkdir(parents=True, exist_ok=True)
+                for index, component in enumerate(components, start=1):
+                    fallback = f"Component{index}"
+                    name = self._sanitize_filename(component.name, fallback)
+                    (components_dir / f"{name}.vue").write_text(component.code, encoding="utf-8")
+
+            session.output_saved = True
+            logger.info(
+                "Auto-saved output",
+                session_id=session.session_id,
+                output_dir=str(output_dir),
+            )
+        except Exception as exc:
+            logger.error(
+                "Auto-save failed",
+                session_id=session.session_id,
+                error=str(exc),
+            )
+
+    @staticmethod
+    def _sanitize_filename(name: str, fallback: str) -> str:
+        cleaned = name.strip() or fallback
+        cleaned = cleaned.replace("/", "_").replace("\\", "_")
+        return cleaned
 
     def get_session(self, session_id: str) -> Optional[Session]:
         """Get session by ID.
