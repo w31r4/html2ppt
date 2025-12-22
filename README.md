@@ -27,14 +27,52 @@
 
 ## 📦 快速开始
 
-### 1. 克隆项目
+### 🐳 Docker 一键部署（推荐）
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/your-username/html2ppt.git
+cd html2ppt
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填入你的 LLM API Key
+
+# 3. 一键启动
+docker compose up -d
+
+# 4. 访问服务
+# 打开浏览器访问 http://localhost:8912
+```
+
+**常用命令：**
+
+```bash
+# 查看日志
+docker compose logs -f
+
+# 停止服务
+docker compose down
+
+# 重新构建并启动
+docker compose up -d --build
+
+# 查看数据卷
+docker volume ls | grep html2ppt
+```
+
+---
+
+### 手动安装
+
+#### 1. 克隆项目
 
 ```bash
 git clone https://github.com/your-username/html2ppt.git
 cd html2ppt
 ```
 
-### 2. 配置环境变量
+#### 2. 配置环境变量
 
 ```bash
 cp .env.example .env
@@ -100,7 +138,7 @@ HTML2PPT_LLM_API_KEY=ollama
 HTML2PPT_LLM_MODEL=llama3.2
 ```
 
-### 3. 安装后端依赖
+#### 3. 安装后端依赖
 
 ```bash
 # 推荐使用 uv 包管理器
@@ -110,14 +148,14 @@ uv sync
 pip install -e .
 ```
 
-### 4. 安装前端依赖
+#### 4. 安装前端依赖
 
 ```bash
 cd frontend
 npm install
 ```
 
-### 5. 启动服务
+#### 5. 启动服务
 
 **启动后端服务：**
 

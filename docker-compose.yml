@@ -1,0 +1,61 @@
+services:
+  # ==========================================================================
+  # Frontend - Nginx serving static files + reverse proxy
+  # ==========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: html2ppt-frontend
+    restart: unless-stopped
+    ports:
+      - "8912:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - html2ppt-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # ==========================================================================
+  # Backend - FastAPI API server
+  # ==========================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: html2ppt-backend
+    restart: unless-stopped
+    volumes:
+      - html2ppt_data:/app/data
+      - html2ppt_output:/app/output
+    env_file:
+      - .env
+    environment:
+      - HTML2PPT_HOST=0.0.0.0
+      - HTML2PPT_PORT=8000
+      - HTML2PPT_DATA_DIR=/app/data
+      - HTML2PPT_OUTPUT_DIR=/app/output
+    networks:
+      - html2ppt-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  html2ppt-network:
+    driver: bridge
+
+volumes:
+  html2ppt_data:
+    driver: local
+  html2ppt_output:
+    driver: local

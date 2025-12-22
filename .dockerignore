@@ -1,0 +1,76 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+env
+.eggs
+*.egg-info
+*.egg
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+dist
+build
+
+# Node.js (keep frontend source for building)
+frontend/node_modules
+frontend/dist
+frontend/.eslintcache
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.docker
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Test files
+tests
+*.test.py
+*.spec.ts
+*.spec.tsx
+
+# Environment files (use env_file in compose)
+.env
+.env.*
+!.env.example
+
+# Misc
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# OpenSpec (development only)
+openspec
+
+# Output directories (mounted as volumes)
+data
+output
+
+# Lock files (we need them for builds)
+# uv.lock - needed
+# package-lock.json - needed
