@@ -336,6 +336,14 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
 """
 
 
+def _fill_prompt(template: str, replacements: dict[str, str]) -> str:
+    """Replace {placeholder} tokens without invoking str.format."""
+    result = template
+    for key, value in replacements.items():
+        result = result.replace(f"{{{key}}}", value)
+    return result
+
+
 def get_outline_prompt(requirement: str, supplement: str | None = None) -> str:
     """Generate outline prompt with requirement and optional supplement.
 
@@ -353,9 +361,12 @@ def get_outline_prompt(requirement: str, supplement: str | None = None) -> str:
 {supplement}
 """
 
-    return OUTLINE_GENERATION_PROMPT.format(
-        requirement=requirement,
-        supplement_section=supplement_section,
+    return _fill_prompt(
+        OUTLINE_GENERATION_PROMPT,
+        {
+            "requirement": requirement,
+            "supplement_section": supplement_section,
+        },
     )
 
 
@@ -417,9 +428,12 @@ def get_vue_prompt(
     if speaker_notes:
         speaker_notes_section = f"### 演讲者备注\n\n{speaker_notes}"
 
-    return VUE_COMPONENT_PROMPT.format(
-        slide_content=slide_content,
-        visual_suggestions=visual_section or "(无特定视觉建议)",
-        animation_effects=animation_section or "(使用默认动画)",
-        speaker_notes_section=speaker_notes_section,
+    return _fill_prompt(
+        VUE_COMPONENT_PROMPT,
+        {
+            "slide_content": slide_content,
+            "visual_suggestions": visual_section or "(无特定视觉建议)",
+            "animation_effects": animation_section or "(使用默认动画)",
+            "speaker_notes_section": speaker_notes_section,
+        },
     )

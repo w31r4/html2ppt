@@ -212,7 +212,7 @@ export default function ResultPage() {
                         Slide {index + 1}
                       </span>
                     </div>
-                    <div className="p-6 bg-white aspect-video flex items-center justify-center">
+                    <div className="bg-white aspect-video overflow-hidden">
                       {componentCode ? (
                         <VuePreview
                           code={componentCode}

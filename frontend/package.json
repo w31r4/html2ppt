@@ -12,6 +12,8 @@
   "dependencies": {
     "@codemirror/lang-markdown": "^6.3.2",
     "@uiw/react-codemirror": "^4.23.6",
+    "@unocss/core": "^66.5.10",
+    "@unocss/preset-uno": "^66.5.10",
     "@vue/compiler-sfc": "^3.5.13",
     "axios": "^1.7.9",
     "lucide-react": "^0.468.0",
