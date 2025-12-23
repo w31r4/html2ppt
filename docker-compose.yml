@@ -1,26 +1,59 @@
 services:
   # ==========================================================================
-  # Frontend - Nginx serving static files + reverse proxy
+  # Nginx - Entry point with routing
   # ==========================================================================
-  frontend:
+  nginx:
     build:
-      context: ./frontend
+      context: ./nginx
       dockerfile: Dockerfile
-    container_name: html2ppt-frontend
+    container_name: html2ppt-nginx
     restart: unless-stopped
     ports:
       - "8912:80"
     depends_on:
+      streamlit:
+        condition: service_healthy
       backend:
         condition: service_healthy
+      vue-preview:
+        condition: service_started
+    networks:
+      - html2ppt-network
+
+  # ==========================================================================
+  # Streamlit - Main frontend
+  # ==========================================================================
+  streamlit:
+    build:
+      context: .
+      dockerfile: streamlit_app/Dockerfile
+    container_name: html2ppt-streamlit
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - API_BASE_URL=http://backend:8000/api
+      - VUE_PREVIEW_URL=/preview
     networks:
       - html2ppt-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "curl", "--fail", "http://localhost:8501/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 10s
+
+  # ==========================================================================
+  # Vue Preview Service - Vue component preview
+  # ==========================================================================
+  vue-preview:
+    build:
+      context: ./vue-preview-service
+      dockerfile: Dockerfile
+    container_name: html2ppt-vue-preview
+    restart: unless-stopped
+    networks:
+      - html2ppt-network
 
   # ==========================================================================
   # Backend - FastAPI API server
@@ -49,6 +82,21 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  # ==========================================================================
+  # Legacy Frontend (deprecated - kept for rollback)
+  # ==========================================================================
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: html2ppt-frontend
+  #   restart: unless-stopped
+  #   depends_on:
+  #     backend:
+  #       condition: service_healthy
+  #   networks:
+  #     - html2ppt-network
 
 networks:
   html2ppt-network:
