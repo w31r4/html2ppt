@@ -3,15 +3,22 @@ import { Save, Loader2, CheckCircle } from 'lucide-react';
 import { getLLMSettings, updateLLMSettings, ApiError, LLMSettings } from '../api/client';
 
 const PROVIDERS = [
-  { value: 'openai', label: 'OpenAI' },
+  { value: 'openai', label: 'OpenAI / OpenAI兼容' },
   { value: 'gemini', label: 'Google Gemini' },
   { value: 'azure_openai', label: 'Azure OpenAI' },
 ];
 
 const PRESET_MODELS: Record<string, string[]> = {
-  openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  gemini: ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash'],
-  azure_openai: ['gpt-4', 'gpt-4-turbo', 'gpt-35-turbo'],
+  openai: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o1-mini'],
+  gemini: [
+    'gemini-2.5-pro',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-2.0-flash-exp',
+  ],
+  azure_openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
 };
 
 export default function SettingsPage() {
@@ -21,6 +28,7 @@ export default function SettingsPage() {
     temperature: 0.7,
     max_tokens: 4096,
   });
+  const [providerLabel, setProviderLabel] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -28,6 +36,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadSettings();
+    const storedLabel = localStorage.getItem('llm_provider_label');
+    if (storedLabel) {
+      setProviderLabel(storedLabel);
+    }
   }, []);
 
   const loadSettings = async () => {
@@ -67,8 +79,17 @@ export default function SettingsPage() {
     setSettings({
       ...settings,
       provider,
-      model: models[0] || '',
+      model: models[0] || settings.model,
     });
+  };
+
+  const handleProviderLabelChange = (value: string) => {
+    setProviderLabel(value);
+    if (value.trim()) {
+      localStorage.setItem('llm_provider_label', value.trim());
+    } else {
+      localStorage.removeItem('llm_provider_label');
+    }
   };
 
   if (loading) {
@@ -105,24 +126,41 @@ export default function SettingsPage() {
           </select>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            自定义供应商名称 (可选)
+          </label>
+          <input
+            type="text"
+            value={providerLabel}
+            onChange={(e) => handleProviderLabelChange(e.target.value)}
+            placeholder="例如: OpenRouter / Ollama / vLLM / 硅基流动"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            仅用于显示与区分，实际调用取决于提供商类型与API端点
+          </p>
+        </div>
+
         {/* Model */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             模型
           </label>
-          <select
+          <input
+            list="model-options"
+            type="text"
             value={settings.model}
             onChange={(e) => setSettings({ ...settings, model: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
+          />
+          <datalist id="model-options">
             {(PRESET_MODELS[settings.provider] || []).map((model) => (
-              <option key={model} value={model}>
-                {model}
-              </option>
+              <option key={model} value={model} />
             ))}
-          </select>
+          </datalist>
           <p className="mt-1 text-sm text-gray-500">
-            选择要使用的模型，推荐使用 GPT-4o 或 Gemini 2.0
+            可直接输入模型名称；推荐使用 GPT-4o 或 Gemini 2.5 系列
           </p>
         </div>
 
@@ -214,8 +252,8 @@ export default function SettingsPage() {
         <h3 className="text-sm font-medium text-blue-800 mb-2">提示</h3>
         <ul className="text-sm text-blue-700 space-y-1">
           <li>• API密钥需要在服务器端的 .env 文件中配置</li>
-          <li>• 推荐使用 Gemini 2.0 Flash 获得最佳性价比</li>
-          <li>• OpenAI兼容端点支持vLLM、Ollama等本地部署方案</li>
+          <li>• 可使用自定义模型名称以兼容各类OpenAI兼容服务</li>
+          <li>• OpenAI兼容端点支持 vLLM、Ollama、OpenRouter 等方案</li>
         </ul>
       </div>
     </div>

@@ -54,7 +54,7 @@ def _extract_code_block(text: str, language: str = "") -> str:
 
 
 def _sanitize_component_name(title: str) -> str:
-    """Convert section title to valid Vue component name.
+    """Convert section title to ASCII-only Vue component name.
 
     Args:
         title: Section title
@@ -62,8 +62,8 @@ def _sanitize_component_name(title: str) -> str:
     Returns:
         PascalCase component name
     """
-    # Remove Chinese characters and special chars, keep alphanumeric
-    cleaned = re.sub(r"[^\w\s]", "", title)
+    # Keep ASCII letters/numbers/spaces only to avoid non-ASCII component names
+    cleaned = re.sub(r"[^A-Za-z0-9\s]", "", title)
     # Split on whitespace and capitalize each word
     words = cleaned.split()
     # Convert to PascalCase
@@ -413,14 +413,15 @@ class PresentationWorkflow:
         Returns:
             Complete slides.md content
         """
-        parts = []
+        slide_texts: list[str] = []
+        frontmatter = ""
 
         if global_frontmatter:
             frontmatter_lines = ["---"]
             for key, value in global_frontmatter.items():
                 frontmatter_lines.append(f"{key}: {value}")
             frontmatter_lines.append("---")
-            parts.append("\n".join(frontmatter_lines))
+            frontmatter = "\n".join(frontmatter_lines)
 
         for i, slide in enumerate(slides):
             # Build frontmatter
@@ -439,10 +440,12 @@ class PresentationWorkflow:
             else:
                 slide_text = slide.content
 
-            parts.append(slide_text)
+            slide_texts.append(slide_text)
 
-        # Join with slide separator
-        return "\n\n---\n\n".join(parts)
+        # Join slides with slide separator, keep deck frontmatter at top without a separator
+        if frontmatter:
+            return frontmatter + "\n\n" + "\n\n---\n\n".join(slide_texts)
+        return "\n\n---\n\n".join(slide_texts)
 
 
 def create_workflow(llm_config: LLMConfig) -> PresentationWorkflow:

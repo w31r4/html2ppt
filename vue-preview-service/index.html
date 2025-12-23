@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vue Preview Service</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #1a1a1a;
+      }
+      #app {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #preview-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+      #preview-mount {
+        position: absolute;
+        background: white;
+      }
+      .error-message {
+        color: #ef4444;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 14px;
+        padding: 20px;
+        text-align: center;
+      }
+      .loading-message {
+        color: #9ca3af;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 14px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="preview-container">
+        <div id="preview-mount"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
