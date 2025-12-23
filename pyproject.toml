@@ -28,6 +28,10 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "structlog>=24.4.0",
     "rich>=13.9.0",
+
+    # Streamlit Frontend
+    "streamlit>=1.28.0",
+    "streamlit-ace>=0.1.1",
 ]
 
 [project.optional-dependencies]
