@@ -214,9 +214,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Vue Preview Service
+vue-preview-service/node_modules/
+vue-preview-service/dist/
+
+# Project specific
 .kilocode/
-.env
 output/
-openspec/
-AGENTS.md
-tasks.md
+data/
