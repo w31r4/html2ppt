@@ -336,6 +336,41 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
 5. **无额外解释**: 只输出代码，不添加任何解释性文字
 """
 
+VUE_FIX_PROMPT = """你是一位专业的Vue前端开发工程师。请修复以下Vue SFC组件的问题。
+
+## 原始组件代码
+
+```vue
+{original_code}
+```
+
+{validation_errors}
+
+## 修复要求
+
+1. **保持原有功能**: 不要删除或大幅改变原有的内容和样式
+2. **修复根容器**: 确保根容器元素（第一个HTML元素）包含以下类名：
+   - `h-full` 或 `h-screen` - 确保高度填满幻灯片
+   - `w-full` - 确保宽度填满幻灯片
+   - `overflow-hidden` - 防止内容溢出
+3. **最小修改**: 只修改必要的部分，保持代码简洁
+4. **完整输出**: 输出完整的修复后的Vue SFC代码
+
+## 示例修复
+
+如果原始根元素是：
+```html
+<div class="flex flex-col items-center justify-center">
+```
+
+应修复为：
+```html
+<div class="h-full w-full overflow-hidden flex flex-col items-center justify-center">
+```
+
+请直接输出修复后的完整Vue SFC代码，不要添加任何解释。
+"""
+
 
 def _fill_prompt(template: str, replacements: dict[str, str]) -> str:
     """Replace {placeholder} tokens without invoking str.format."""
@@ -436,5 +471,24 @@ def get_vue_prompt(
             "visual_suggestions": visual_section or "(无特定视觉建议)",
             "animation_effects": animation_section or "(使用默认动画)",
             "speaker_notes_section": speaker_notes_section,
+        },
+    )
+
+
+def get_vue_fix_prompt(original_code: str, validation_errors: str) -> str:
+    """Generate Vue component fix prompt with validation errors.
+
+    Args:
+        original_code: Original Vue SFC code that failed validation
+        validation_errors: Formatted validation errors string
+
+    Returns:
+        Formatted prompt string for LLM to fix the component
+    """
+    return _fill_prompt(
+        VUE_FIX_PROMPT,
+        {
+            "original_code": original_code,
+            "validation_errors": validation_errors,
         },
     )

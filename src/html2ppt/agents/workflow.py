@@ -9,7 +9,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from html2ppt.agents.llm_factory import create_llm
-from html2ppt.agents.prompts import get_outline_prompt, get_vue_prompt
+from html2ppt.agents.prompts import get_outline_prompt, get_vue_fix_prompt, get_vue_prompt
 from html2ppt.agents.state import (
     Outline,
     OutlineSection,
@@ -22,10 +22,17 @@ from html2ppt.agents.state import (
     set_slidev_result,
     update_outline,
 )
+from html2ppt.agents.validators import (
+    format_validation_errors_for_prompt,
+    validate_vue_component,
+)
 from html2ppt.config.llm import LLMConfig
 from html2ppt.config.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Maximum number of validation fix retries
+MAX_VALIDATION_RETRIES = 3
 
 
 def _extract_code_block(text: str, language: str = "") -> str:
@@ -300,17 +307,64 @@ class PresentationWorkflow:
                     response = await self.llm.ainvoke(messages)
                     code = _extract_code_block(response.content, "vue")
 
+                    # Validation and fix loop
+                    retry_count = 0
+                    validation_warnings: list[str] = []
+
+                    while retry_count < MAX_VALIDATION_RETRIES:
+                        validation_result = validate_vue_component(code)
+
+                        if validation_result.is_valid:
+                            logger.info(
+                                "Component validation passed",
+                                session_id=state["session_id"],
+                                section=section.title,
+                                retry_count=retry_count,
+                            )
+                            break
+
+                        retry_count += 1
+                        logger.warning(
+                            "Component validation failed, attempting fix",
+                            session_id=state["session_id"],
+                            section=section.title,
+                            retry_count=retry_count,
+                            errors=validation_result.errors,
+                        )
+
+                        if retry_count >= MAX_VALIDATION_RETRIES:
+                            # Max retries reached, keep last version with warnings
+                            validation_warnings = validation_result.errors + validation_result.warnings
+                            logger.warning(
+                                "Max validation retries reached, keeping last version with warnings",
+                                session_id=state["session_id"],
+                                section=section.title,
+                                warnings=validation_warnings,
+                            )
+                            break
+
+                        # Generate fix prompt and retry
+                        error_text = format_validation_errors_for_prompt(validation_result)
+                        fix_prompt = get_vue_fix_prompt(code, error_text)
+
+                        fix_messages = [
+                            SystemMessage(content="你是一位专业的Vue前端开发工程师，擅长修复组件问题。"),
+                            HumanMessage(content=fix_prompt),
+                        ]
+
+                        fix_response = await self.llm.ainvoke(fix_messages)
+                        code = _extract_code_block(fix_response.content, "vue")
+
                     component = VueComponent(
                         name=component_names[index],
                         code=code,
                         section_title=section.title,
+                        validation_warnings=validation_warnings,
+                        retry_count=retry_count,
                     )
                     return index, component
 
-            tasks = [
-                asyncio.create_task(generate_component(i, section))
-                for i, section in enumerate(outline.sections)
-            ]
+            tasks = [asyncio.create_task(generate_component(i, section)) for i, section in enumerate(outline.sections)]
 
             results: list[VueComponent | None] = [None] * total_sections
             for task in asyncio.as_completed(tasks):

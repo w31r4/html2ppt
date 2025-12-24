@@ -291,6 +291,14 @@ class VueComponent(BaseModel):
     name: str = Field(..., description="Component name")
     code: str = Field(..., description="Vue component code (SFC)")
     section_title: str = Field(..., description="Original section title")
+    validation_warnings: list[str] = Field(
+        default_factory=list,
+        description="Validation warnings if component has issues but was kept",
+    )
+    retry_count: int = Field(
+        default=0,
+        description="Number of validation fix retries performed",
+    )
 
 
 class SlidevSlide(BaseModel):
