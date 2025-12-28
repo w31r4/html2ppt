@@ -44,7 +44,7 @@ async function renderPreview(): Promise<void> {
   const code = getCodeFromUrl();
   
   if (!code) {
-    showError('No component code provided. Use ?code=base64_encoded_vue_sfc');
+    showError('No content provided. Use ?code=base64_encoded_slidev_markdown');
     return;
   }
   
