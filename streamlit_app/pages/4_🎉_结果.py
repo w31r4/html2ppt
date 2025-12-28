@@ -1,7 +1,8 @@
-"""Result page with Vue preview."""
+"""Result page with Slidev preview."""
 
 import streamlit as st
 import base64
+import json
 import os
 import sys
 from pathlib import Path
@@ -17,7 +18,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# Vue Preview Service URL
+# Slidev Preview Service URL
 VUE_PREVIEW_URL = os.getenv("VUE_PREVIEW_URL", "http://localhost:5173")
 
 # Check session
@@ -79,40 +80,31 @@ tab_preview, tab_markdown, tab_components = st.tabs(["👁️ 预览", "📄 Mar
 with tab_preview:
     st.subheader("幻灯片预览")
 
-    if not slides:
+    if not slides_md.strip():
         st.info("没有可预览的幻灯片")
     else:
-        # Create component map
         component_map = {comp.get("name"): comp.get("code", "") for comp in components}
+        code_base64 = base64.b64encode(slides_md.encode("utf-8")).decode()
+        preview_url = f"{VUE_PREVIEW_URL}?code={code_base64}"
 
-        # Slide selector
-        slide_index = st.selectbox("选择幻灯片", range(len(slides)), format_func=lambda i: f"Slide {i + 1}")
+        if component_map:
+            components_payload = base64.b64encode(
+                json.dumps(component_map, ensure_ascii=False).encode("utf-8")
+            ).decode()
+            preview_url = f"{preview_url}&components={components_payload}"
 
-        current_slide = slides[slide_index]
-        component_name = current_slide.get("component_name")
-
-        if component_name and component_name in component_map:
-            # Render Vue component via iframe
-            code = component_map[component_name]
-            code_base64 = base64.b64encode(code.encode()).decode()
-            preview_url = f"{VUE_PREVIEW_URL}?code={code_base64}"
-
-            st.markdown(
-                f"""
-            <iframe 
-                src="{preview_url}" 
-                width="100%" 
-                height="600" 
-                style="border: 1px solid #ddd; border-radius: 8px;"
-                frameborder="0"
-            ></iframe>
-            """,
-                unsafe_allow_html=True,
-            )
-        else:
-            # Render markdown content
-            content = current_slide.get("content", "")
-            st.markdown(content)
+        st.markdown(
+            f"""
+        <iframe 
+            src="{preview_url}" 
+            width="100%" 
+            height="600" 
+            style="border: 1px solid #ddd; border-radius: 8px;"
+            frameborder="0"
+        ></iframe>
+        """,
+            unsafe_allow_html=True,
+        )
 
 with tab_markdown:
     st.subheader("Slidev Markdown")

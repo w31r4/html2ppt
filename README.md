@@ -22,7 +22,7 @@
 **前端**
 - Streamlit - Python 全栈 Web 框架
 - streamlit-ace - Markdown 编辑器
-- Vue Preview Service - 独立的 Vue 组件预览服务（Vite + Vue 3）
+- Slidev Preview Service - Slidev 预览服务（Vite + Vue 3）
 
 ## 📦 快速开始
 
@@ -90,7 +90,7 @@ docker volume ls | grep html2ppt
 │        │                 └──────────────┘                        │
 │        │                                                         │
 │        └── /preview/*  → ┌──────────────┐                        │
-│                          │ vue-preview  │  Vue 组件预览服务      │
+│                          │ vue-preview  │  Slidev 预览服务       │
 │                          │   :80        │  (Vite 构建)          │
 │                          └──────────────┘                        │
 │                                                                  │
@@ -102,7 +102,7 @@ docker volume ls | grep html2ppt
 - **nginx** - 入口网关，路由分发
 - **streamlit** - Python 全栈 Web 界面
 - **backend** - FastAPI REST API
-- **vue-preview** - 独立的 Vue SFC 浏览器端编译预览服务
+- **vue-preview** - 独立的 Slidev 浏览器端预览服务
 
 ---
 
@@ -191,7 +191,7 @@ uv sync
 pip install -e .
 ```
 
-#### 4. 安装 Vue Preview 依赖（可选，仅开发时需要）
+#### 4. 安装 Slidev Preview 依赖（可选，仅开发时需要）
 
 ```bash
 cd vue-preview-service
@@ -216,7 +216,7 @@ python main.py
 streamlit run streamlit_app/app.py --server.port 8501
 ```
 
-**启动 Vue Preview 服务（可选）：**
+**启动 Slidev Preview 服务（可选）：**
 
 ```bash
 cd vue-preview-service
@@ -259,7 +259,7 @@ html2ppt/
 │       ├── 3_⏳_生成中.py
 │       ├── 4_🎉_结果.py
 │       └── 5_⚙️_设置.py
-├── vue-preview-service/    # Vue 组件预览服务
+├── vue-preview-service/    # Slidev 预览服务
 │   ├── src/                # 源码
 │   ├── Dockerfile          # Docker 构建文件
 │   └── package.json        # 依赖配置

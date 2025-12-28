@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vue Preview Service</title>
+    <title>Slidev Preview Service</title>
     <style>
       * {
         margin: 0;
@@ -14,24 +14,24 @@
       body {
         width: 100%;
         height: 100%;
-        overflow: hidden;
         background: #1a1a1a;
+      }
+      body {
+        overflow: auto;
       }
       #app {
         width: 100%;
         height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
       }
       #preview-container {
         width: 100%;
         height: 100%;
         position: relative;
-        overflow: hidden;
+        overflow: auto;
       }
       #preview-mount {
-        position: absolute;
+        position: relative;
+        min-height: 100%;
         background: white;
       }
       .error-message {

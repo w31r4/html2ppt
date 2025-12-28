@@ -1,5 +1,5 @@
 import { createApp, h } from 'vue';
-import { SlideRenderer, SlidesRender, type SlideSource } from 'slidev-parser';
+import { SlideRenderer, SlidesRender, type RendererOptions, type SlideSource } from 'slidev-parser';
 import 'slidev-parser/index.css';
 
 export interface PreviewState {
@@ -39,7 +39,8 @@ export async function renderVueComponent(
   code: string,
   containerEl: HTMLElement,
   mountEl: HTMLElement,
-  state: PreviewState
+  state: PreviewState,
+  rendererOptions?: RendererOptions
 ): Promise<void> {
   cleanupPreview(state, mountEl);
 
@@ -56,6 +57,7 @@ export async function renderVueComponent(
     setup() {
       return () => h(SlidesRender, {
         slides,
+        rendererOptions,
       });
     },
   });
