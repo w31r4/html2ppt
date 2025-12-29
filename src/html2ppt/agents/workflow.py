@@ -121,7 +121,7 @@ class PresentationWorkflow:
             "human_review",
             self._route_after_review,
             {
-                "regenerate": "generate_outline",
+                "regenerate": "research_topic",
                 "continue": "generate_vue",
             },
         )
@@ -262,7 +262,7 @@ class PresentationWorkflow:
         if state.get("stage") == WorkflowStage.OUTLINE_CONFIRMED:
             return "continue"
 
-        # If supplement was added, regenerate
+        # If supplement was added, regenerate (including research)
         if state.get("supplement"):
             return "regenerate"
 

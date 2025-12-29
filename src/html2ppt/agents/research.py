@@ -31,7 +31,7 @@ class ResearchAgent:
             max_results: Maximum number of search results to fetch.
         """
         settings = get_settings()
-        self.api_key = api_key if api_key is not None else settings.tavily_api_key
+        self.api_key = api_key if api_key is not None else settings.tavily_api_key or os.environ.get("TAVILY_API_KEY")
         self.max_results = max_results
         self._tool: Any = None
 
@@ -50,9 +50,9 @@ class ResearchAgent:
             ImportError: If langchain-community is not installed.
         """
         if self._tool is None:
-            # Set API key in environment for Tavily tool
+            # Set API key in environment for Tavily tool if not already there
             if self.api_key:
-                os.environ["TAVILY_API_KEY"] = self.api_key
+                os.environ.setdefault("TAVILY_API_KEY", self.api_key)
 
             try:
                 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -150,7 +150,11 @@ class ResearchAgent:
 
                 lines.append(line)
 
-            return "\n".join(lines).strip()
+            result_text = "\n".join(lines).strip()
+            # Limit the result text length to avoid token limits
+            if len(result_text) > 4000:
+                result_text = result_text[:4000] + "... (truncated)"
+            return result_text
 
         # Fallback for unknown format
         return str(results).strip()
