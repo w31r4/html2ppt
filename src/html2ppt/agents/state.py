@@ -322,6 +322,9 @@ class WorkflowState(TypedDict):
     requirement: str
     supplement: Optional[str]
 
+    # Research
+    research_findings: Optional[str]
+
     # Workflow tracking
     stage: WorkflowStage
     error: Optional[str]
@@ -363,6 +366,7 @@ def create_initial_state(
         session_id=session_id,
         requirement=requirement,
         supplement=supplement,
+        research_findings=None,
         stage=WorkflowStage.INITIAL,
         error=None,
         progress=0.0,

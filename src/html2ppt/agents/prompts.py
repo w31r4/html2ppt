@@ -8,6 +8,8 @@ OUTLINE_GENERATION_PROMPT = """你是一位专业的演示文稿设计师和动�
 
 {supplement_section}
 
+{research_section}
+
 ## 大纲格式要求
 
 每一页（Slide）必须包含以下结构：
@@ -380,12 +382,17 @@ def _fill_prompt(template: str, replacements: dict[str, str]) -> str:
     return result
 
 
-def get_outline_prompt(requirement: str, supplement: str | None = None) -> str:
-    """Generate outline prompt with requirement and optional supplement.
+def get_outline_prompt(
+    requirement: str,
+    supplement: str | None = None,
+    research_findings: str | None = None,
+) -> str:
+    """Generate outline prompt with requirement, optional supplement, and research.
 
     Args:
         requirement: User requirement text
         supplement: Optional additional requirements
+        research_findings: Optional research findings from Tavily search
 
     Returns:
         Formatted prompt string
@@ -397,11 +404,26 @@ def get_outline_prompt(requirement: str, supplement: str | None = None) -> str:
 {supplement}
 """
 
+    research_section = ""
+    if research_findings:
+        research_section = f"""## 研究参考（来自网络搜索的最新信息）
+
+以下是关于该主题的最新研究发现，请在生成大纲时参考这些信息，确保内容的时效性和准确性：
+
+{research_findings}
+
+**注意**: 请将上述研究信息融入大纲内容中，但不要直接复制粘贴。应该：
+1. 提取关键数据和趋势用于支撑论点
+2. 引用具体案例增强说服力
+3. 使用最新统计数据确保内容时效性
+"""
+
     return _fill_prompt(
         OUTLINE_GENERATION_PROMPT,
         {
             "requirement": requirement,
             "supplement_section": supplement_section,
+            "research_section": research_section,
         },
     )
 

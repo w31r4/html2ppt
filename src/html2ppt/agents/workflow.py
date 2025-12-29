@@ -10,6 +10,7 @@ from langgraph.graph import END, START, StateGraph
 
 from html2ppt.agents.llm_factory import create_llm
 from html2ppt.agents.prompts import get_outline_prompt, get_vue_fix_prompt, get_vue_prompt
+from html2ppt.agents.research import ResearchAgent
 from html2ppt.agents.state import (
     Outline,
     OutlineSection,
@@ -91,6 +92,7 @@ class PresentationWorkflow:
             llm_config: Configuration for the LLM backend
         """
         self.llm = create_llm(llm_config)
+        self.research_agent = ResearchAgent()
         self.graph = self._build_graph()
         self.checkpointer = MemorySaver()
 
@@ -103,13 +105,15 @@ class PresentationWorkflow:
         graph = StateGraph(WorkflowState)
 
         # Add nodes
+        graph.add_node("research_topic", self._research_topic_node)
         graph.add_node("generate_outline", self._generate_outline_node)
         graph.add_node("human_review", self._human_review_node)
         graph.add_node("generate_vue", self._generate_vue_node)
         graph.add_node("assemble_slidev", self._assemble_slidev_node)
 
         # Add edges
-        graph.add_edge(START, "generate_outline")
+        graph.add_edge(START, "research_topic")
+        graph.add_edge("research_topic", "generate_outline")
         graph.add_edge("generate_outline", "human_review")
 
         # Conditional edge after human review
@@ -138,6 +142,51 @@ class PresentationWorkflow:
             interrupt_before=["human_review"],  # Pause before human review
         )
 
+    async def _research_topic_node(self, state: WorkflowState) -> dict:
+        """Research topic before outline generation.
+
+        This node uses Tavily search to gather real-time information
+        about the presentation topic. If Tavily API key is not configured,
+        this step is gracefully skipped.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            State update with research findings
+        """
+        logger.info("Researching topic", session_id=state["session_id"])
+
+        # Build query from requirement and supplement
+        query_parts = [state["requirement"]]
+        supplement = state.get("supplement")
+        if supplement:
+            query_parts.append(supplement)
+        query = "\n".join(query_parts)
+
+        if not self.research_agent.enabled:
+            logger.info(
+                "Research skipped: Tavily API key not configured",
+                session_id=state["session_id"],
+            )
+            return {"research_findings": None}
+
+        findings = await self.research_agent.research(query)
+
+        if findings:
+            logger.info(
+                "Research completed",
+                session_id=state["session_id"],
+                findings_length=len(findings),
+            )
+        else:
+            logger.info(
+                "Research returned no findings",
+                session_id=state["session_id"],
+            )
+
+        return {"research_findings": findings or None}
+
     async def _generate_outline_node(self, state: WorkflowState) -> dict:
         """Generate outline from requirements.
 
@@ -153,6 +202,7 @@ class PresentationWorkflow:
             prompt = get_outline_prompt(
                 requirement=state["requirement"],
                 supplement=state.get("supplement"),
+                research_findings=state.get("research_findings"),
             )
 
             messages = [

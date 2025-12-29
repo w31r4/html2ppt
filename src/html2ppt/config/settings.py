@@ -84,6 +84,12 @@ class Settings(BaseSettings):
         description="Azure API version",
     )
 
+    # Research Settings (Tavily)
+    tavily_api_key: str = Field(
+        default="",
+        description="Tavily API key for research agent (optional)",
+    )
+
     # Storage Settings
     data_dir: Path = Field(
         default=Path("data"),
