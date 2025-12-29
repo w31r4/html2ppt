@@ -285,6 +285,31 @@ class Outline(BaseModel):
         return "\n".join(lines)
 
 
+class DesignSystem(BaseModel):
+    """Global design system for the presentation deck.
+
+    Defines consistent visual rules that all slides must follow.
+    """
+
+    theme_name: str = Field(..., description="Theme name for the presentation")
+    color_palette: dict[str, str] = Field(
+        default_factory=dict,
+        description="Color palette tokens mapped to CSS colors (e.g., {'primary': '#3b82f6', 'accent': '#f59e0b'})",
+    )
+    typography: dict[str, str] = Field(
+        default_factory=dict,
+        description="Typography tokens for fonts, sizes, and weights (e.g., {'heading': 'Inter', 'body': 'system-ui'})",
+    )
+    layout_rules: list[str] = Field(
+        default_factory=list,
+        description="Layout and spacing rules as natural language guidelines",
+    )
+    uno_css_classes: list[str] = Field(
+        default_factory=list,
+        description="Reusable UnoCSS utility class combinations",
+    )
+
+
 class VueComponent(BaseModel):
     """A generated Vue component for a slide."""
 
@@ -335,6 +360,9 @@ class WorkflowState(TypedDict):
     outline: Optional[Outline]
     outline_history: list[str]  # Previous versions for undo
 
+    # Design system (generated after outline confirmation)
+    design_system: Optional[DesignSystem]
+
     # Vue generation
     vue_components: list[VueComponent]
     current_generating_index: int
@@ -373,6 +401,7 @@ def create_initial_state(
         outline_markdown=None,
         outline=None,
         outline_history=[],
+        design_system=None,
         vue_components=[],
         current_generating_index=0,
         slidev_slides=[],

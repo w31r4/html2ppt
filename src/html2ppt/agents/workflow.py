@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from html2ppt.agents.design_director import DesignDirectorAgent
 from html2ppt.agents.llm_factory import create_llm
 from html2ppt.agents.prompts import get_outline_prompt, get_vue_fix_prompt, get_vue_prompt
 from html2ppt.agents.research import ResearchAgent
@@ -93,6 +94,7 @@ class PresentationWorkflow:
         """
         self.llm = create_llm(llm_config)
         self.research_agent = ResearchAgent()
+        self.design_director = DesignDirectorAgent(self.llm)
         self.graph = self._build_graph()
         self.checkpointer = MemorySaver()
 
@@ -108,6 +110,7 @@ class PresentationWorkflow:
         graph.add_node("research_topic", self._research_topic_node)
         graph.add_node("generate_outline", self._generate_outline_node)
         graph.add_node("human_review", self._human_review_node)
+        graph.add_node("design_director", self._design_director_node)
         graph.add_node("generate_vue", self._generate_vue_node)
         graph.add_node("assemble_slidev", self._assemble_slidev_node)
 
@@ -122,10 +125,12 @@ class PresentationWorkflow:
             self._route_after_review,
             {
                 "regenerate": "research_topic",
-                "continue": "generate_vue",
+                "continue": "design_director",
             },
         )
 
+        # Design director → Vue generation → Assembly
+        graph.add_edge("design_director", "generate_vue")
         graph.add_edge("generate_vue", "assemble_slidev")
         graph.add_edge("assemble_slidev", END)
 
@@ -268,6 +273,52 @@ class PresentationWorkflow:
 
         return "continue"
 
+    async def _design_director_node(self, state: WorkflowState) -> dict:
+        """Generate global design system after outline confirmation.
+
+        This node creates a unified design system that all Vue slide
+        components must follow, ensuring visual consistency across
+        the entire presentation.
+
+        Args:
+            state: Current workflow state
+
+        Returns:
+            State update with design system
+        """
+        logger.info("Generating design system", session_id=state["session_id"])
+
+        # Get outline markdown for context
+        outline_markdown = state.get("outline_markdown")
+        outline = state.get("outline")
+        if not outline_markdown and outline:
+            outline_markdown = outline.raw_markdown
+
+        try:
+            design_system = await self.design_director.generate(
+                requirement=state["requirement"],
+                outline_markdown=outline_markdown or "",
+                supplement=state.get("supplement"),
+                research_findings=state.get("research_findings"),
+            )
+
+            logger.info(
+                "Design system generated",
+                session_id=state["session_id"],
+                theme_name=design_system.theme_name,
+            )
+
+            return {"design_system": design_system}
+
+        except Exception as e:
+            logger.warning(
+                "Design system generation failed, proceeding without design system",
+                session_id=state["session_id"],
+                error=str(e),
+            )
+            # Graceful degradation: continue without design system
+            return {"design_system": None}
+
     async def _generate_vue_node(self, state: WorkflowState) -> dict:
         """Generate Vue components for each section.
 
@@ -289,6 +340,10 @@ class PresentationWorkflow:
             # Parse from markdown if not structured
             outline_md = state.get("outline_markdown", "")
             outline = Outline.from_markdown(outline_md)
+
+        # Get design system for visual consistency
+        design_system = state.get("design_system")
+        design_system_data = design_system.model_dump() if design_system else None
 
         components: list[VueComponent] = []
         total_sections = len(outline.sections)
@@ -343,6 +398,7 @@ class PresentationWorkflow:
                         section_points=section.points,
                         speaker_notes=section.speaker_notes,
                         visual_suggestions=visual_dict,
+                        design_system=design_system_data,
                         animation_effects=animation_dict,
                         raw_content=section.raw_content,
                     )

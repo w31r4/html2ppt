@@ -117,6 +117,8 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
 
 {visual_suggestions}
 
+{design_system_section}
+
 {animation_effects}
 
 {speaker_notes_section}
@@ -129,6 +131,7 @@ VUE_COMPONENT_PROMPT = """你是一位专业的Vue前端开发工程师和动画
 4. **背景**: 根据视觉建议实现渐变、图片或纯色背景
 5. **样式**: 若使用自定义动画类，必须在 `<style scoped>` 内定义对应 `@keyframes`
 6. **简洁脚本**: 尽量避免`<script>`，如需使用只写`<script setup>`且不引入外部依赖
+7. **设计系统**: 如有提供设计系统，必须遵循其中的色板、字体和布局规则，优先复用 `uno_css_classes` 中的类名
 
 ## 动画实现规则
 
@@ -433,6 +436,7 @@ def get_vue_prompt(
     section_points: list[str] | None = None,
     speaker_notes: str | None = None,
     visual_suggestions: dict | None = None,
+    design_system: dict | None = None,
     animation_effects: dict | None = None,
     raw_content: str | None = None,
 ) -> str:
@@ -443,6 +447,7 @@ def get_vue_prompt(
         section_points: List of bullet points (optional if raw_content provided)
         speaker_notes: Optional speaker notes
         visual_suggestions: Visual design suggestions dict
+        design_system: Global design system dict for visual consistency
         animation_effects: Animation effects dict
         raw_content: Raw markdown content for this section
 
@@ -470,6 +475,40 @@ def get_vue_prompt(
             visual_parts.append(f"- **图片链接**: {visual_suggestions['image_url']}")
         visual_section = "\n".join(visual_parts)
 
+    # Build design system section
+    design_system_section = ""
+    if design_system:
+        design_parts = ["### 设计系统（全局规则，必须遵循）"]
+
+        theme_name = design_system.get("theme_name")
+        if theme_name:
+            design_parts.append(f"- **主题名称**: {theme_name}")
+
+        color_palette = design_system.get("color_palette")
+        if color_palette and isinstance(color_palette, dict):
+            palette_items = [f"{key}: {value}" for key, value in color_palette.items()]
+            design_parts.append(f"- **色板**: {', '.join(palette_items)}")
+
+        typography = design_system.get("typography")
+        if typography:
+            if isinstance(typography, dict):
+                typo_items = [f"{key}: {value}" for key, value in typography.items()]
+                design_parts.append(f"- **字体规范**: {', '.join(typo_items)}")
+            else:
+                design_parts.append(f"- **字体规范**: {typography}")
+
+        layout_rules = design_system.get("layout_rules")
+        if layout_rules and isinstance(layout_rules, list):
+            design_parts.append("- **布局规则**:")
+            for rule in layout_rules:
+                design_parts.append(f"  - {rule}")
+
+        uno_css_classes = design_system.get("uno_css_classes")
+        if uno_css_classes and isinstance(uno_css_classes, list):
+            design_parts.append(f"- **可复用 UnoCSS 类**: `{' '.join(uno_css_classes)}`")
+
+        design_system_section = "\n".join(design_parts)
+
     # Build animation effects section
     animation_section = ""
     if animation_effects:
@@ -491,6 +530,7 @@ def get_vue_prompt(
         {
             "slide_content": slide_content,
             "visual_suggestions": visual_section or "(无特定视觉建议)",
+            "design_system_section": design_system_section or "(未提供设计系统)",
             "animation_effects": animation_section or "(使用默认动画)",
             "speaker_notes_section": speaker_notes_section,
         },
