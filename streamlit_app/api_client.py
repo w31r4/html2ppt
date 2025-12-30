@@ -6,6 +6,10 @@ from typing import Any, Optional
 import httpx
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/api")
+API_PUBLIC_BASE_URL = os.getenv("API_PUBLIC_BASE_URL")
+if not API_PUBLIC_BASE_URL:
+    API_PUBLIC_BASE_URL = "/api" if "backend:8000" in API_BASE_URL else API_BASE_URL
+API_PUBLIC_BASE_URL = API_PUBLIC_BASE_URL.rstrip("/")
 
 
 class APIError(Exception):
@@ -160,7 +164,7 @@ def get_export_url(session_id: str, include_components: bool = False) -> str:
         Export URL
     """
     suffix = "?include_components=true" if include_components else ""
-    return f"{API_BASE_URL}/export/{session_id}{suffix}"
+    return f"{API_PUBLIC_BASE_URL}/export/{session_id}{suffix}"
 
 
 def get_llm_settings() -> dict:

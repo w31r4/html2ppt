@@ -10,20 +10,21 @@ from html2ppt.agents.llm_factory import LLMFactory, create_llm
 from html2ppt.config.llm import LLMConfig, LLMProvider, PRESET_CONFIGS
 from html2ppt.config.logging import get_logger
 from html2ppt.config.reflection import ReflectionConfig, merge_reflection_config
-from html2ppt.config.runtime_overrides import clear_override, get_override, set_override
+from html2ppt.config.runtime_overrides import clear_override, get_override, set_override, update_override
 from html2ppt.config.settings import get_settings
 
 router = APIRouter()
 logger = get_logger(__name__)
 
 _REFLECTION_NAMESPACE = "reflection"
+_LLM_NAMESPACE = "llm"
 
 
 class LLMSettingsInput(BaseModel):
     """Input model for LLM settings update."""
 
     provider: LLMProvider = Field(default=LLMProvider.OPENAI)
-    api_key: str = Field(..., min_length=1)
+    api_key: Optional[str] = Field(default=None, min_length=1)
     base_url: Optional[str] = Field(None)
     model: str = Field(default="gpt-4o")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
@@ -90,6 +91,32 @@ class ReflectionSettingsResponse(BaseModel):
     overridden_fields: list[str]
 
 
+def _resolve_llm_effective(settings) -> dict[str, Any]:
+    override = get_override(_LLM_NAMESPACE) or {}
+    provider = override.get("provider", settings.llm_provider)
+    if not isinstance(provider, LLMProvider):
+        try:
+            provider = LLMProvider(provider)
+        except ValueError:
+            provider = settings.llm_provider
+
+    api_key = override.get("api_key") or settings.llm_api_key
+    if isinstance(api_key, SecretStr):
+        api_key = api_key.get_secret_value()
+
+    return {
+        "provider": provider,
+        "api_key": api_key,
+        "base_url": override.get("base_url", settings.llm_base_url),
+        "model": override.get("model", settings.llm_model),
+        "temperature": override.get("temperature", settings.llm_temperature),
+        "max_tokens": override.get("max_tokens", settings.llm_max_tokens),
+        "azure_endpoint": override.get("azure_endpoint", settings.llm_azure_endpoint),
+        "azure_deployment": override.get("azure_deployment", settings.llm_azure_deployment),
+        "api_version": override.get("api_version", settings.llm_api_version),
+    }
+
+
 @router.get("/llm")
 async def get_llm_settings() -> LLMSettingsResponse:
     """Get current LLM settings.
@@ -98,14 +125,16 @@ async def get_llm_settings() -> LLMSettingsResponse:
         Current LLM configuration (without API key)
     """
     settings = get_settings()
+    effective = _resolve_llm_effective(settings)
+    provider = effective["provider"]
 
     return LLMSettingsResponse(
-        provider=settings.llm_provider.value,
-        model=settings.llm_model,
-        base_url=settings.llm_base_url,
-        temperature=settings.llm_temperature,
-        max_tokens=settings.llm_max_tokens,
-        is_configured=bool(settings.llm_api_key),
+        provider=provider.value if isinstance(provider, LLMProvider) else str(provider),
+        model=effective["model"],
+        base_url=effective["base_url"],
+        temperature=effective["temperature"],
+        max_tokens=effective["max_tokens"],
+        is_configured=bool(effective["api_key"]),
     )
 
 
@@ -122,24 +151,31 @@ async def update_llm_settings(config: LLMSettingsInput) -> LLMSettingsResponse:
     Returns:
         Updated configuration
     """
+    patch = config.model_dump(exclude_unset=True, exclude_none=True, mode="json")
+    if patch:
+        update_override(_LLM_NAMESPACE, patch)
+
     # Clear cached LLM instances
     LLMFactory.clear_cache()
 
-    # Note: In a real implementation, you might want to persist this
-    # For now, we just validate and return
+    settings = get_settings()
+    effective = _resolve_llm_effective(settings)
+    provider = effective["provider"]
+
     logger.info(
         "LLM settings updated",
-        provider=config.provider,
-        model=config.model,
+        updated_fields=sorted([key for key in patch.keys() if key != "api_key"]),
+        provider=provider.value if isinstance(provider, LLMProvider) else str(provider),
+        model=effective["model"],
     )
 
     return LLMSettingsResponse(
-        provider=config.provider.value,
-        model=config.model,
-        base_url=config.base_url,
-        temperature=config.temperature,
-        max_tokens=config.max_tokens,
-        is_configured=True,
+        provider=provider.value if isinstance(provider, LLMProvider) else str(provider),
+        model=effective["model"],
+        base_url=effective["base_url"],
+        temperature=effective["temperature"],
+        max_tokens=effective["max_tokens"],
+        is_configured=bool(effective["api_key"]),
     )
 
 
@@ -154,9 +190,18 @@ async def validate_llm_settings(config: LLMSettingsInput) -> ValidationResult:
         Validation result
     """
     try:
+        api_key = config.api_key
+        if not api_key:
+            settings = get_settings()
+            override = get_override(_LLM_NAMESPACE) or {}
+            api_key = override.get("api_key") or settings.llm_api_key
+
+        if not api_key:
+            return ValidationResult(valid=False, message="API key is required for validation")
+
         llm_config = LLMConfig(
             provider=config.provider,
-            api_key=SecretStr(config.api_key),
+            api_key=SecretStr(api_key),
             base_url=config.base_url,
             model=config.model,
             temperature=config.temperature,

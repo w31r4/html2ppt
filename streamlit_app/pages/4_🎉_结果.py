@@ -1,7 +1,7 @@
 """Result page with Slidev preview."""
 
 import streamlit as st
-import base64
+import streamlit.components.v1 as st_components
 import json
 import os
 import sys
@@ -20,6 +20,12 @@ st.set_page_config(
 
 # Slidev Preview Service URL
 VUE_PREVIEW_URL = os.getenv("VUE_PREVIEW_URL", "http://localhost:5173")
+
+
+def normalize_preview_url(url: str) -> str:
+    if not url:
+        return "/preview/"
+    return url if url.endswith("/") else f"{url}/"
 
 # Check session
 if "session_id" not in st.session_state or not st.session_state.session_id:
@@ -46,7 +52,7 @@ except APIError as e:
     st.stop()
 
 slides_md = result.get("slides_md", "")
-components = result.get("components", [])
+component_list = result.get("components", [])
 slides = result.get("slides", [])
 
 # Header
@@ -83,27 +89,39 @@ with tab_preview:
     if not slides_md.strip():
         st.info("没有可预览的幻灯片")
     else:
-        component_map = {comp.get("name"): comp.get("code", "") for comp in components}
-        code_base64 = base64.b64encode(slides_md.encode("utf-8")).decode()
-        preview_url = f"{VUE_PREVIEW_URL}?code={code_base64}"
-
+        component_map = {comp.get("name"): comp.get("code", "") for comp in component_list}
+        preview_url = normalize_preview_url(VUE_PREVIEW_URL)
+        payload = {
+            "type": "preview-code",
+            "code": slides_md,
+        }
         if component_map:
-            components_payload = base64.b64encode(
-                json.dumps(component_map, ensure_ascii=False).encode("utf-8")
-            ).decode()
-            preview_url = f"{preview_url}&components={components_payload}"
+            payload["components"] = component_map
 
-        st.markdown(
+        payload_json = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+
+        st_components.html(
             f"""
-        <iframe 
-            src="{preview_url}" 
-            width="100%" 
-            height="600" 
+        <iframe
+            id="preview-frame"
+            src="{preview_url}"
+            width="100%"
+            height="600"
             style="border: 1px solid #ddd; border-radius: 8px;"
             frameborder="0"
         ></iframe>
+        <script>
+          const payload = {payload_json};
+          const frame = document.getElementById('preview-frame');
+          const sendPayload = () => {{
+            if (!frame || !frame.contentWindow) return;
+            frame.contentWindow.postMessage(payload, "*");
+          }};
+          frame.addEventListener('load', sendPayload);
+          setTimeout(sendPayload, 500);
+        </script>
         """,
-            unsafe_allow_html=True,
+            height=620,
         )
 
 with tab_markdown:
@@ -120,16 +138,16 @@ with tab_markdown:
 with tab_components:
     st.subheader("Vue 组件")
 
-    if not components:
+    if not component_list:
         st.info("没有生成的Vue组件")
     else:
         # Component selector
-        component_names = [comp.get("name", f"Component {i}") for i, comp in enumerate(components)]
+        component_names = [comp.get("name", f"Component {i}") for i, comp in enumerate(component_list)]
         selected_component = st.selectbox("选择组件", component_names)
 
         # Find selected component
         selected_idx = component_names.index(selected_component)
-        component = components[selected_idx]
+        component = component_list[selected_idx]
 
         st.markdown(f"**{component.get('name', 'Component')}.vue**")
         st.code(component.get("code", ""), language="vue", line_numbers=True)

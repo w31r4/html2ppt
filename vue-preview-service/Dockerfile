@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+ENV VITE_BASE_PATH=/preview/
 RUN npm run build
 
 FROM nginx:alpine

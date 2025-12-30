@@ -21,6 +21,7 @@ from html2ppt.config.settings import get_settings
 logger = get_logger(__name__)
 
 _REFLECTION_NAMESPACE = "reflection"
+_LLM_NAMESPACE = "llm"
 
 
 @dataclass
@@ -54,8 +55,27 @@ class SessionManager:
         Returns:
             LLMConfig from settings
         """
+        from pydantic import SecretStr
+
         settings = get_settings()
-        return settings.get_llm_config()
+        override = get_override(_LLM_NAMESPACE) or {}
+
+        provider = override.get("provider", settings.llm_provider)
+        api_key = override.get("api_key") or settings.llm_api_key
+        if isinstance(api_key, SecretStr):
+            api_key = api_key.get_secret_value()
+
+        return LLMConfig(
+            provider=provider,
+            api_key=SecretStr(api_key),
+            base_url=override.get("base_url", settings.llm_base_url),
+            model=override.get("model", settings.llm_model),
+            temperature=override.get("temperature", settings.llm_temperature),
+            max_tokens=override.get("max_tokens", settings.llm_max_tokens),
+            azure_endpoint=override.get("azure_endpoint", settings.llm_azure_endpoint),
+            azure_deployment=override.get("azure_deployment", settings.llm_azure_deployment),
+            api_version=override.get("api_version", settings.llm_api_version),
+        )
 
     def get_reflection_config(self) -> ReflectionConfig:
         """Get effective reflection configuration (env defaults + runtime override)."""

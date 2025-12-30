@@ -33,6 +33,7 @@ services:
       - .env
     environment:
       - API_BASE_URL=http://backend:8000/api
+      - API_PUBLIC_BASE_URL=/api
       - VUE_PREVIEW_URL=/preview
     networks:
       - html2ppt-network
