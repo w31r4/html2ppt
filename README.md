@@ -438,7 +438,7 @@ class: text-center
 | 自定义端点 | Llama 3.3 70B, DeepSeek等 | 本地部署/开源模型 | `OPENAI_API_BASE` |
 
 ### 💡 模型选择建议
-
+- **最佳模型** Gemini 3 Pro
 - **追求最佳效果**: Claude Opus 4.5 或 GPT-5.2
 - **追求性价比**: Gemini 3 Flash（与Pro级模型效果相近，成本更低）
 - **代码生成任务**: Claude Opus 4.5（在代码生成测试中表现最佳）
