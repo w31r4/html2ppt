@@ -360,7 +360,8 @@ class SessionManager:
             return None
 
         stage = session.state.get("stage")
-        if stage != WorkflowStage.COMPLETED:
+        stage_value = stage.value if hasattr(stage, "value") else str(stage)
+        if stage_value != WorkflowStage.COMPLETED.value:
             return None
 
         return {

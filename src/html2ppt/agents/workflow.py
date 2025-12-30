@@ -378,18 +378,21 @@ class PresentationWorkflow:
 
         try:
             semaphore = asyncio.Semaphore(4)
-            used_names: set[str] = set()
+            used_component_names: set[str] = set()
             component_names: list[str] = []
             for index, section in enumerate(outline.sections):
                 base_name = _sanitize_component_name(section.title)
                 if base_name == "Slide":
-                    component_name = f"Slide{index + 1}"
+                    candidate = f"Slide{index + 1}"
                 else:
-                    name = base_name
-                    if name in used_names:
-                        name = f"{name}{index + 1}"
-                    component_name = name if name.endswith("Slide") else f"{name}Slide"
-                    used_names.add(name)
+                    candidate = base_name if base_name.endswith("Slide") else f"{base_name}Slide"
+
+                component_name = candidate
+                suffix = 2
+                while component_name in used_component_names:
+                    component_name = f"{candidate}{suffix}"
+                    suffix += 1
+                used_component_names.add(component_name)
                 component_names.append(component_name)
 
             async def generate_component(index: int, section: OutlineSection) -> tuple[int, VueComponent]:
@@ -623,14 +626,14 @@ class PresentationWorkflow:
             Complete slides.md content
         """
         slide_texts: list[str] = []
-        frontmatter = ""
+        deck_frontmatter = ""
 
         if global_frontmatter:
             frontmatter_lines = ["---"]
             for key, value in global_frontmatter.items():
                 frontmatter_lines.append(f"{key}: {value}")
             frontmatter_lines.append("---")
-            frontmatter = "\n".join(frontmatter_lines)
+            deck_frontmatter = "\n".join(frontmatter_lines)
 
         for i, slide in enumerate(slides):
             # Build frontmatter
@@ -639,21 +642,21 @@ class PresentationWorkflow:
                 for key, value in slide.frontmatter.items():
                     frontmatter_lines.append(f"{key}: {value}")
                 frontmatter_lines.append("---")
-                frontmatter = "\n".join(frontmatter_lines)
+                slide_frontmatter = "\n".join(frontmatter_lines)
             else:
-                frontmatter = ""
+                slide_frontmatter = ""
 
             # Combine frontmatter and content
-            if frontmatter:
-                slide_text = f"{frontmatter}\n\n{slide.content}"
+            if slide_frontmatter:
+                slide_text = f"{slide_frontmatter}\n\n{slide.content}"
             else:
                 slide_text = slide.content
 
             slide_texts.append(slide_text)
 
         # Join slides with slide separator, keep deck frontmatter at top without a separator
-        if frontmatter:
-            return frontmatter + "\n\n" + "\n\n---\n\n".join(slide_texts)
+        if deck_frontmatter:
+            return deck_frontmatter + "\n\n" + "\n\n---\n\n".join(slide_texts)
         return "\n\n---\n\n".join(slide_texts)
 
 
