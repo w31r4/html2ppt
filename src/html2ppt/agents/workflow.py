@@ -11,6 +11,7 @@ from langgraph.graph import END, START, StateGraph
 from html2ppt.agents.design_director import DesignDirectorAgent
 from html2ppt.agents.llm_factory import create_llm
 from html2ppt.agents.prompts import get_outline_prompt, get_vue_fix_prompt, get_vue_prompt
+from html2ppt.agents.reflection_reviewer import ReflectionReviewer
 from html2ppt.agents.research import ResearchAgent
 from html2ppt.agents.state import (
     Outline,
@@ -30,6 +31,7 @@ from html2ppt.agents.validators import (
 )
 from html2ppt.config.llm import LLMConfig
 from html2ppt.config.logging import get_logger
+from html2ppt.config.reflection import ReflectionConfig
 
 logger = get_logger(__name__)
 
@@ -86,13 +88,36 @@ def _sanitize_component_name(title: str) -> str:
 class PresentationWorkflow:
     """LangGraph workflow for generating presentations."""
 
-    def __init__(self, llm_config: LLMConfig):
+    def __init__(
+        self,
+        llm_config: LLMConfig,
+        reflection_config: ReflectionConfig | None = None,
+    ):
         """Initialize workflow with LLM configuration.
 
         Args:
             llm_config: Configuration for the LLM backend
+            reflection_config: Optional reflection reviewer configuration
         """
+        self.llm_config = llm_config
         self.llm = create_llm(llm_config)
+
+        self.reflection_config = reflection_config or ReflectionConfig()
+        self.reflection_reviewer: ReflectionReviewer | None = None
+        if self.reflection_config.enabled:
+            evaluator_llm = self.llm
+            if self.reflection_config.enable_llm_review:
+                evaluator_config = llm_config.model_copy(
+                    update={"temperature": self.reflection_config.evaluator_temperature}
+                )
+                evaluator_llm = create_llm(evaluator_config)
+
+            self.reflection_reviewer = ReflectionReviewer(
+                generator_llm=self.llm,
+                evaluator_llm=evaluator_llm,
+                config=self.reflection_config,
+            )
+
         self.research_agent = ResearchAgent()
         self.design_director = DesignDirectorAgent(self.llm)
         self.graph = self._build_graph()
@@ -461,12 +486,36 @@ class PresentationWorkflow:
                         fix_response = await self.llm.ainvoke(fix_messages)
                         code = _extract_code_block(fix_response.content, "vue")
 
+                    # Reflection review & (optional) rewrite loop
+                    reflection_warnings: list[str] = []
+                    reflection_retry_count = 0
+                    if self.reflection_reviewer:
+                        try:
+                            reflection_result = await self.reflection_reviewer.review_and_rewrite(
+                                section=section,
+                                code=code,
+                                design_system=design_system_data,
+                                session_id=state["session_id"],
+                            )
+                            code = reflection_result.code
+                            reflection_warnings = reflection_result.warnings
+                            reflection_retry_count = reflection_result.retry_count
+                        except Exception as exc:
+                            logger.warning(
+                                "Reflection reviewer failed, continuing without reflection changes",
+                                session_id=state["session_id"],
+                                section=section.title,
+                                error=str(exc),
+                            )
+
                     component = VueComponent(
                         name=component_names[index],
                         code=code,
                         section_title=section.title,
                         validation_warnings=validation_warnings,
                         retry_count=retry_count,
+                        reflection_warnings=reflection_warnings,
+                        reflection_retry_count=reflection_retry_count,
                     )
                     return index, component
 
@@ -608,13 +657,18 @@ class PresentationWorkflow:
         return "\n\n---\n\n".join(slide_texts)
 
 
-def create_workflow(llm_config: LLMConfig) -> PresentationWorkflow:
+def create_workflow(
+    llm_config: LLMConfig,
+    *,
+    reflection_config: ReflectionConfig | None = None,
+) -> PresentationWorkflow:
     """Create a presentation generation workflow.
 
     Args:
         llm_config: LLM configuration
+        reflection_config: Optional reflection reviewer configuration
 
     Returns:
         Configured PresentationWorkflow instance
     """
-    return PresentationWorkflow(llm_config)
+    return PresentationWorkflow(llm_config, reflection_config=reflection_config)

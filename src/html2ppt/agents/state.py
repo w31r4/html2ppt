@@ -325,6 +325,16 @@ class VueComponent(BaseModel):
         description="Number of validation fix retries performed",
     )
 
+    # Reflection Reviewer metadata (optional)
+    reflection_warnings: list[str] = Field(
+        default_factory=list,
+        description="Reflection review warnings if the component was kept after review",
+    )
+    reflection_retry_count: int = Field(
+        default=0,
+        description="Number of reflection rewrite attempts performed",
+    )
+
 
 class SlidevSlide(BaseModel):
     """A single Slidev slide."""

@@ -89,8 +89,23 @@ class LLMFactory:
 
     @classmethod
     def _get_cache_key(cls, config: LLMConfig) -> str:
-        """Generate cache key for LLM instance."""
-        return f"{config.provider}:{config.model}:{config.base_url or 'default'}"
+        """Generate cache key for LLM instance.
+
+        Note:
+            The cache key must include parameters that materially affect model behavior,
+            otherwise different configs (e.g., evaluator vs generator) may incorrectly
+            share the same underlying LLM instance.
+        """
+        return (
+            f"{config.provider}:"
+            f"{config.model}:"
+            f"{config.base_url or 'default'}:"
+            f"temp={config.temperature}:"
+            f"max_tokens={config.max_tokens}:"
+            f"azure_endpoint={config.azure_endpoint or 'default'}:"
+            f"azure_deployment={config.azure_deployment or 'default'}:"
+            f"api_version={config.api_version or 'default'}"
+        )
 
     @classmethod
     def clear_cache(cls) -> None:

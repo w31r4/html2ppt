@@ -1,5 +1,7 @@
 """Prompt templates for LLM agents."""
 
+import json
+
 OUTLINE_GENERATION_PROMPT = """你是一位专业的演示文稿设计师和动画专家。根据用户的需求描述，生成一份包含视觉建议和动画效果的详细Markdown大纲。
 
 ## 需求描述
@@ -376,6 +378,69 @@ VUE_FIX_PROMPT = """你是一位专业的Vue前端开发工程师。请修复以
 请直接输出修复后的完整Vue SFC代码，不要添加任何解释。
 """
 
+REFLECTION_REVIEW_PROMPT = """你是一位严格但务实的演示文稿审查员（Reflection Reviewer）。
+你将对单页 Vue SFC 组件进行审查，目标是提升可读性、信息密度与版式一致性。
+
+## 页面信息（来自大纲）
+
+- 标题：{section_title}
+
+### 原始大纲内容
+{raw_outline}
+
+## 组件代码（Vue SFC）
+```vue
+{vue_code}
+```
+
+{design_system_section}
+
+## 静态规则发现的问题（若为空表示未发现）
+{static_issues_section}
+
+## 输出要求（必须严格遵守）
+你必须仅输出一个 JSON 对象（不要 Markdown 代码块，不要解释文字），字段如下：
+- should_rewrite: boolean，是否建议触发重写
+- issues: string[]，列出发现的问题（尽量具体、可操作）
+- rewrite_instructions: string，给开发者/生成器的简洁重写指令（一句话或少量要点）
+
+请注意：
+- 如果静态规则已发现明显问题，通常 should_rewrite 应为 true。
+- 如果问题轻微但不影响展示，可 should_rewrite 为 false，并把问题放入 issues 供记录。
+
+"""
+
+REFLECTION_REWRITE_PROMPT = """你是一位专业的Vue前端开发工程师。
+请在尽量保持原有信息内容与主题风格不变的前提下，重写该单页组件以改善可读性与版式。
+
+## 页面信息（来自大纲）
+
+- 标题：{section_title}
+
+### 原始大纲内容
+{raw_outline}
+
+## 需要解决的问题
+{issues_section}
+
+## 重写指令（更高优先级）
+{rewrite_instructions}
+
+{design_system_section}
+
+## 原始组件代码（Vue SFC）
+```vue
+{original_code}
+```
+
+## 输出要求
+1. 只输出完整的 Vue SFC 代码
+2. 保持 Slidev 兼容：根容器需要 `h-full`/`h-screen` + `w-full` + `overflow-hidden`（或等价）
+3. 尽量减少改动范围，但必须解决上面的问题
+4. 不要输出任何解释文字
+
+"""
+
 
 def _fill_prompt(template: str, replacements: dict[str, str]) -> str:
     """Replace {placeholder} tokens without invoking str.format."""
@@ -552,5 +617,73 @@ def get_vue_fix_prompt(original_code: str, validation_errors: str) -> str:
         {
             "original_code": original_code,
             "validation_errors": validation_errors,
+        },
+    )
+
+
+def get_reflection_review_prompt(
+    *,
+    section_title: str,
+    raw_outline: str,
+    vue_code: str,
+    design_system: dict | None = None,
+    static_issues: list[str] | None = None,
+) -> str:
+    """Generate per-slide reflection review prompt."""
+    design_system_section = ""
+    if design_system:
+        design_system_section = "## 设计系统（全局规则，必须遵循）\n\n" + json.dumps(
+            design_system,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    static_issues_section = ""
+    if static_issues:
+        static_issues_section = "\n".join(f"- {issue}" for issue in static_issues)
+    else:
+        static_issues_section = "(无)"
+
+    return _fill_prompt(
+        REFLECTION_REVIEW_PROMPT,
+        {
+            "section_title": section_title,
+            "raw_outline": raw_outline or "(无)",
+            "vue_code": vue_code,
+            "design_system_section": design_system_section or "(未提供设计系统)",
+            "static_issues_section": static_issues_section,
+        },
+    )
+
+
+def get_reflection_rewrite_prompt(
+    *,
+    section_title: str,
+    raw_outline: str,
+    original_code: str,
+    issues: list[str],
+    rewrite_instructions: str,
+    design_system: dict | None = None,
+) -> str:
+    """Generate per-slide reflection rewrite prompt."""
+    design_system_section = ""
+    if design_system:
+        design_system_section = "## 设计系统（全局规则，必须遵循）\n\n" + json.dumps(
+            design_system,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    issues_section = "\n".join(f"- {issue}" for issue in issues) if issues else "(无)"
+
+    return _fill_prompt(
+        REFLECTION_REWRITE_PROMPT,
+        {
+            "section_title": section_title,
+            "raw_outline": raw_outline or "(无)",
+            "original_code": original_code,
+            "issues_section": issues_section,
+            "rewrite_instructions": rewrite_instructions or "(无额外指令)",
+            "design_system_section": design_system_section or "(未提供设计系统)",
         },
     )

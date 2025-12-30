@@ -1,8 +1,9 @@
 """API client for FastAPI backend."""
 
-import httpx
-from typing import Optional
 import os
+from typing import Any, Optional
+
+import httpx
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/api")
 
@@ -172,6 +173,36 @@ def get_llm_settings() -> dict:
         response = client.get("/settings/llm")
         if response.status_code != 200:
             return {"provider": "openai", "model": "gpt-4o", "temperature": 0.7, "max_tokens": 4096}
+        return response.json()
+
+
+def get_reflection_settings() -> dict:
+    """Get reflection reviewer settings (base/override/effective)."""
+    with get_client() as client:
+        response = client.get("/settings/reflection")
+        if response.status_code != 200:
+            detail = response.json().get("detail", "Get reflection settings failed")
+            raise APIError(detail, response.status_code, detail)
+        return response.json()
+
+
+def update_reflection_settings(patch: dict[str, Any]) -> dict:
+    """Update reflection reviewer settings (runtime override patch)."""
+    with get_client() as client:
+        response = client.put("/settings/reflection", json=patch)
+        if response.status_code != 200:
+            detail = response.json().get("detail", "Update reflection settings failed")
+            raise APIError(detail, response.status_code, detail)
+        return response.json()
+
+
+def reset_reflection_settings() -> dict:
+    """Reset reflection reviewer settings by clearing runtime override."""
+    with get_client() as client:
+        response = client.delete("/settings/reflection")
+        if response.status_code != 200:
+            detail = response.json().get("detail", "Reset reflection settings failed")
+            raise APIError(detail, response.status_code, detail)
         return response.json()
 
 

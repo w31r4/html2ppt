@@ -14,9 +14,13 @@ from html2ppt.agents.state import (
 from html2ppt.agents.workflow import PresentationWorkflow, create_workflow
 from html2ppt.config.llm import LLMConfig
 from html2ppt.config.logging import get_logger
+from html2ppt.config.reflection import ReflectionConfig, merge_reflection_config
+from html2ppt.config.runtime_overrides import get_override
 from html2ppt.config.settings import get_settings
 
 logger = get_logger(__name__)
+
+_REFLECTION_NAMESPACE = "reflection"
 
 
 @dataclass
@@ -53,6 +57,14 @@ class SessionManager:
         settings = get_settings()
         return settings.get_llm_config()
 
+    def get_reflection_config(self) -> ReflectionConfig:
+        """Get effective reflection configuration (env defaults + runtime override)."""
+        settings = get_settings()
+        base = settings.get_reflection_config()
+        override = get_override(_REFLECTION_NAMESPACE)
+        effective, _overridden = merge_reflection_config(base=base, override=override)
+        return effective
+
     async def create_session(
         self,
         requirement: str,
@@ -78,7 +90,8 @@ class SessionManager:
 
         # Create workflow
         llm_config = self.get_llm_config()
-        workflow = create_workflow(llm_config)
+        reflection_config = self.get_reflection_config()
+        workflow = create_workflow(llm_config, reflection_config=reflection_config)
 
         # Create thread config for checkpointing
         thread_config = {"configurable": {"thread_id": session_id}}

@@ -8,6 +8,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from html2ppt.config.llm import LLMConfig, LLMProvider
+from html2ppt.config.reflection import ReflectionConfig
 
 
 class Settings(BaseSettings):
@@ -90,6 +91,63 @@ class Settings(BaseSettings):
         description="Tavily API key for research agent (optional)",
     )
 
+    # Reflection Settings (Reviewer) - default disabled
+    reflection_enabled: bool = Field(
+        default=False,
+        description="Enable reflection review stages (optional)",
+    )
+    reflection_per_slide_max_rewrites: int = Field(
+        default=2,
+        ge=0,
+        description="Maximum rewrite attempts per slide during reflection review",
+    )
+    reflection_enable_llm_review: bool = Field(
+        default=True,
+        description="Enable LLM-as-a-judge per-slide evaluation",
+    )
+    reflection_enable_rule_text_density: bool = Field(
+        default=True,
+        description="Enable per-slide text density rule",
+    )
+    reflection_text_char_limit: int = Field(
+        default=900,
+        ge=0,
+        description="Approximate visible text character limit per slide",
+    )
+    reflection_enable_rule_point_density: bool = Field(
+        default=True,
+        description="Enable per-slide point density rules",
+    )
+    reflection_max_points_per_slide: int = Field(
+        default=8,
+        ge=0,
+        description="Maximum number of bullet points per slide (approximate)",
+    )
+    reflection_max_chars_per_point: int = Field(
+        default=120,
+        ge=0,
+        description="Maximum approximate characters per bullet point",
+    )
+    reflection_enable_rule_root_container: bool = Field(
+        default=True,
+        description="Re-enforce existing root container constraints during review",
+    )
+    reflection_evaluator_temperature: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for evaluator LLM calls",
+    )
+    reflection_enable_global_review: bool = Field(
+        default=False,
+        description="Enable global deck review stage",
+    )
+    reflection_global_max_rewrite_passes: int = Field(
+        default=1,
+        ge=0,
+        description="Maximum number of global rewrite passes",
+    )
+
     # Storage Settings
     data_dir: Path = Field(
         default=Path("data"),
@@ -118,6 +176,23 @@ class Settings(BaseSettings):
             azure_endpoint=self.llm_azure_endpoint,
             azure_deployment=self.llm_azure_deployment,
             api_version=self.llm_api_version,
+        )
+
+    def get_reflection_config(self) -> ReflectionConfig:
+        """Convert flat settings to ReflectionConfig object."""
+        return ReflectionConfig(
+            enabled=self.reflection_enabled,
+            per_slide_max_rewrites=self.reflection_per_slide_max_rewrites,
+            enable_llm_review=self.reflection_enable_llm_review,
+            enable_rule_text_density=self.reflection_enable_rule_text_density,
+            text_char_limit=self.reflection_text_char_limit,
+            enable_rule_point_density=self.reflection_enable_rule_point_density,
+            max_points_per_slide=self.reflection_max_points_per_slide,
+            max_chars_per_point=self.reflection_max_chars_per_point,
+            enable_rule_root_container=self.reflection_enable_rule_root_container,
+            evaluator_temperature=self.reflection_evaluator_temperature,
+            enable_global_review=self.reflection_enable_global_review,
+            global_max_rewrite_passes=self.reflection_global_max_rewrite_passes,
         )
 
 
