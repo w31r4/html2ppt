@@ -7,6 +7,7 @@
 - **智能大纲生成** - AI自动分析需求，生成包含视觉建议和动画效果的结构化大纲
 - **人工审核编辑** - 支持Markdown编辑器实时调整大纲内容
 - **Vue组件生成** - 自动生成带动画效果的Vue组件（.vue + `<style scoped>`）
+- **Reflection 审查（可选）** - 生成后逐页规则校验 + 可选 LLM 复核，必要时打回重写；默认关闭，可通过 env / 设置页启用
 - **Slidev格式导出** - 一键导出兼容Slidev的Markdown演示文稿
 - **组件打包导出** - 可下载包含slides.md与components/*.vue的zip
 - **多LLM后端支持** - 支持OpenAI、Google Gemini、Azure OpenAI等
@@ -282,7 +283,8 @@ html2ppt/
 | GET | `/api/result/{session_id}` | 获取生成结果 |
 | GET | `/api/export/{session_id}` | 导出slides.md |
 | GET | `/api/export/{session_id}?include_components=true` | 导出slides.md与components/*.vue的zip |
-| GET/PUT | `/api/settings/llm` | LLM配置管理 |
+| GET/PUT | `/api/settings/llm` | LLM配置管理（运行时更新，不写回 `.env`） |
+| GET/PUT/DELETE | `/api/settings/reflection` | Reflection 审查配置（运行时覆盖：读取/更新/重置） |
 
 ## 🎨 生成的大纲格式
 
@@ -313,6 +315,40 @@ html2ppt/
 
 - Slidev内动画使用`v-click/v-clicks`控制顺序
 - 视觉动画在Vue组件内通过`<style scoped>`定义（预览页可静态/近似展示，Slidev中效果完整）
+
+## 🔎 Reflection 审查（可选）
+
+Reflection 审查是一个“生成后质量兜底”阶段：
+
+- **逐页审查**：对每个 `.vue` 组件进行快速规则检查（文本/要点密度 + 根容器结构），并可选调用 LLM 进行审查（LLM-as-a-Judge）。
+- **可选重写**：当判定需要修复时，会按配置触发有限次数的重写；超过次数会降级保留最后版本并记录 warnings。
+- **默认关闭**：只有显式启用时才会生效。
+
+### 配置方式
+
+**方式 A：通过 `.env` 启用（持久）**
+
+在 `.env` 中设置：
+
+- `HTML2PPT_REFLECTION_ENABLED=true`
+- 其他 `HTML2PPT_REFLECTION_*` 参数见 [`.env.example`](.env.example:1)
+
+**方式 B：通过设置页启用（运行时覆盖）**
+
+在 Streamlit 的“⚙️ 设置 → Reflection 审查”区域调整即可生效。该方式是**运行时覆盖**：
+
+- 会覆盖 env 默认值
+- **重启服务后会恢复为 `.env` 默认值**
+- 可通过“清除运行时覆盖”按钮恢复到 env 默认值
+
+### 常用参数（概览）
+
+- `HTML2PPT_REFLECTION_PER_SLIDE_MAX_REWRITES`：逐页最大重写次数（默认 2）
+- `HTML2PPT_REFLECTION_ENABLE_LLM_REVIEW`：是否启用 LLM 复核（默认 true）
+- `HTML2PPT_REFLECTION_EVALUATOR_TEMPERATURE`：Judge 温度（默认 0.1）
+- `HTML2PPT_REFLECTION_TEXT_CHAR_LIMIT`：单页文本字符上限（估算，默认 900）
+- `HTML2PPT_REFLECTION_MAX_POINTS_PER_SLIDE`：单页要点数上限（估算，默认 8）
+
 
 ## ▶️ 与 Slidev 配合使用（详细）
 
