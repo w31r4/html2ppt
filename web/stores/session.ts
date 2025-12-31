@@ -89,7 +89,7 @@ export const useSessionStore = defineStore('session', {
       }
     },
     initHistory() {
-      if (!process.client) return;
+      if (!import.meta.client) return;
       const raw = window.localStorage.getItem(HISTORY_KEY);
       if (!raw) return;
       try {
@@ -99,7 +99,7 @@ export const useSessionStore = defineStore('session', {
       }
     },
     persistHistory() {
-      if (!process.client) return;
+      if (!import.meta.client) return;
       window.localStorage.setItem(HISTORY_KEY, JSON.stringify(this.history));
     },
     rememberSession(title: string) {

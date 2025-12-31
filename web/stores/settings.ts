@@ -23,7 +23,7 @@ export const useSettingsStore = defineStore('settings', {
   
   actions: {
     initSettings() {
-      if (!process.client) return;
+      if (!import.meta.client) return;
       const raw = window.localStorage.getItem(SETTINGS_KEY);
       if (!raw) return;
       
@@ -41,7 +41,7 @@ export const useSettingsStore = defineStore('settings', {
     },
     
     persistSettings() {
-      if (!process.client) return;
+      if (!import.meta.client) return;
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(this.$state));
     },
     

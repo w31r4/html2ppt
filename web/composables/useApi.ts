@@ -2,14 +2,14 @@ export function useApi() {
   const config = useRuntimeConfig();
   let rawBase = (config.public.apiBase || '/api').replace(/\/$/, '');
   if (
-    process.client &&
+    import.meta.client &&
     rawBase === '/api' &&
     window.location.hostname === 'localhost' &&
-    (process.dev || import.meta.dev)
+    import.meta.dev
   ) {
     rawBase = 'http://localhost:8000/api';
   }
-  const origin = process.client ? window.location.origin : useRequestURL().origin;
+  const origin = import.meta.client ? window.location.origin : useRequestURL().origin;
   const base = rawBase.startsWith('http')
     ? rawBase
     : `${origin}${rawBase.startsWith('/') ? '' : '/'}${rawBase}`;

@@ -32,10 +32,10 @@ const config = useRuntimeConfig();
 const previewBase = computed(() => {
   const raw = (config.public.previewBase || '/preview').replace(/\/$/, '');
   if (
-    process.client &&
+    import.meta.client &&
     raw === '/preview' &&
     window.location.hostname === 'localhost' &&
-    (process.dev || import.meta.dev)
+    import.meta.dev
   ) {
     return 'http://localhost:5173';
   }
@@ -43,7 +43,7 @@ const previewBase = computed(() => {
 });
 
 const previewOrigin = computed(() => {
-  if (!process.client) return '';
+  if (!import.meta.client) return '';
   const raw = previewBase.value;
   if (raw.startsWith('http')) {
     try {

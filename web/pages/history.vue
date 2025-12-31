@@ -37,6 +37,11 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+
+import { useSessionStore } from '@/stores/session';
+
 const store = useSessionStore();
 const router = useRouter();
 

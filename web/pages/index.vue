@@ -79,6 +79,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue';
+
+import { useSessionStore } from '@/stores/session';
+
 const store = useSessionStore();
 const prompt = ref('');
 

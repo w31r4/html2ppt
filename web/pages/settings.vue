@@ -86,6 +86,10 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue';
+
+import { useSettingsStore } from '@/stores/settings';
+
 const settingsStore = useSettingsStore();
 const settings = ref({ ...settingsStore.$state });
 

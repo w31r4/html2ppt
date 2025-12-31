@@ -1,5 +1,5 @@
 export default defineNuxtConfig({
-  modules: ['@pinia/nuxt', '@unocss/nuxt'],
+  modules: ['@pinia/nuxt'],
   css: ['@/assets/styles/main.css'],
   app: {
     baseURL: process.env.NUXT_APP_BASE_URL || '/agent/',
