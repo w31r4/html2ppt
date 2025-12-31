@@ -157,6 +157,8 @@ const statusLabel = computed(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(230, 221, 208, 0.9);
 }
 
 .header-title {
@@ -167,29 +169,8 @@ const statusLabel = computed(() => {
 
 .header-title h1 {
   font-family: var(--font-serif);
-  font-size: 1.8rem;
+  font-size: 2rem;
   margin: 0;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-teal);
-  box-shadow: 0 0 0 3px rgba(47, 167, 160, 0.15);
 }
 
 .preview-card {

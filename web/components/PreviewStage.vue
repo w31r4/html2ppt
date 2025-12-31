@@ -6,17 +6,19 @@
         <p>Confirm the outline to generate slides and see the live preview.</p>
       </div>
     </div>
-    <iframe
-      v-else
-      ref="iframeRef"
-      class="preview-frame"
-      :key="previewKey"
-      :src="previewUrl"
-      title="Slide preview"
-      loading="lazy"
-      sandbox="allow-scripts allow-same-origin"
-      @load="handleFrameLoad"
-    ></iframe>
+    <div v-else class="preview-shell">
+      <iframe
+        ref="iframeRef"
+        class="preview-frame"
+        :key="previewKey"
+        :src="previewUrl"
+        title="Slide preview"
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin"
+        @load="handleFrameLoad"
+      ></iframe>
+      <div v-if="!frameReady" class="preview-footer">Loading preview...</div>
+    </div>
   </div>
 </template>
 

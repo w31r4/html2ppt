@@ -1,29 +1,6 @@
 <template>
-  <div class="layout-root">
+  <div class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-sans h-screen flex overflow-hidden transition-colors duration-200">
     <SideNav />
-    <main class="layout-content">
-      <slot />
-    </main>
+    <slot />
   </div>
 </template>
-
-<style scoped>
-.layout-root {
-  display: flex;
-  min-height: 100vh;
-}
-
-.layout-content {
-  flex: 1;
-  margin-left: 240px;
-  padding: 32px 40px;
-  max-width: 1600px;
-  width: 100%;
-}
-
-@media (max-width: 1024px) {
-  .layout-content {
-    padding: 24px;
-  }
-}
-</style>

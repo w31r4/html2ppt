@@ -1,13 +1,46 @@
-import { defineConfig, presetUno } from 'unocss';
+import { defineConfig, presetUno, presetWebFonts } from 'unocss';
 
 export default defineConfig({
-  presets: [presetUno()],
+  presets: [
+    presetUno(),
+    presetWebFonts({
+      provider: 'google',
+      fonts: {
+        sans: 'Inter:300,400,500,600,700',
+        mono: 'JetBrains Mono:400,500',
+      },
+    }),
+  ],
+  theme: {
+    colors: {
+      primary: {
+        DEFAULT: '#2D9C8F',
+        dark: '#1E7A6E',
+      },
+      background: {
+        light: '#F2EFE9',
+        dark: '#1a1b1e',
+      },
+      card: {
+        light: '#FFFFFF',
+        dark: '#25262b',
+      },
+      text: {
+        light: '#374151',
+        dark: '#C1C2C5',
+      },
+      border: {
+        light: '#E5E7EB',
+        dark: '#2C2E33',
+      },
+    },
+  },
   shortcuts: {
-    'card': 'rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-soft)]',
-    'card-warm': 'rounded-[var(--radius-lg)] bg-[var(--surface-warm)] border border-[var(--line)] shadow-[var(--shadow-soft)]',
-    'btn': 'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
-    'btn-primary': 'btn bg-[var(--accent-teal)] text-white hover:bg-[#278f89]',
-    'btn-ghost': 'btn border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--surface-warm)]',
-    'pill': 'inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-3 py-1 text-xs uppercase tracking-[0.2em]'
+    'card': 'bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-sm',
+    'btn': 'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors',
+    'btn-primary': 'bg-primary hover:bg-primary-dark text-white shadow-sm shadow-primary/30',
+    'btn-ghost': 'bg-white dark:bg-card-dark border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700',
+    'icon-btn': 'p-2 rounded-xl text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+    'custom-scrollbar': 'scrollbar scrollbar-w-1.5 scrollbar-track-transparent scrollbar-thumb-gray-300/30 hover:scrollbar-thumb-gray-300/50 scrollbar-thumb-rounded-full',
   }
 });
