@@ -1,20 +1,25 @@
 <template>
-  <div class="outline-editor">
-    <div class="card-header">
+  <div class="flex flex-col h-full">
+    <div class="flex justify-between items-center mb-4 shrink-0">
       <div>
-        <h3>Outline</h3>
-        <p>Review structure before generating slides.</p>
+        <h3 class="font-bold text-lg text-gray-900 dark:text-white">Outline</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Review structure before generating.</p>
       </div>
-      <span class="badge">{{ badgeLabel }}</span>
+      <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-[10px] font-bold text-gray-500 uppercase tracking-wider border border-gray-200 dark:border-gray-700">{{ badgeLabel }}</span>
     </div>
-    <div class="card-body">
-      <textarea v-model="localOutline" :disabled="isLocked"></textarea>
-      <div class="composer-actions" style="margin-top: 12px;">
-        <button class="btn-ghost" type="button" :disabled="!canSave" @click="save">
-          Save outline
+    <div class="bg-gray-50 dark:bg-[#1a1b1e] rounded-xl p-4 flex-1 overflow-y-auto border border-gray-100 dark:border-gray-800 font-mono text-sm custom-scrollbar relative group">
+      <textarea
+        v-model="localOutline"
+        :disabled="isLocked"
+        class="w-full h-full bg-transparent border-none resize-none focus:ring-0 p-0 text-gray-700 dark:text-gray-300"
+      ></textarea>
+      
+      <div class="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button class="btn-ghost text-xs py-1.5 px-3" type="button" :disabled="!canSave" @click="save">
+          Save
         </button>
-        <button class="btn-primary" type="button" :disabled="!canConfirm" @click="confirm">
-          Confirm + Generate
+        <button class="btn-primary text-xs py-1.5 px-3" type="button" :disabled="!canConfirm" @click="confirm">
+          Confirm
         </button>
       </div>
     </div>

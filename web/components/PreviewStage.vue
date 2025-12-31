@@ -1,15 +1,13 @@
 <template>
-  <div>
-    <div v-if="!slidesMd" class="preview-placeholder">
-      <div>
-        <p><strong>No preview yet.</strong></p>
-        <p>Confirm the outline to generate slides and see the live preview.</p>
-      </div>
+  <div class="flex-1 bg-black relative flex items-center justify-center overflow-hidden w-full h-full">
+    <div v-if="!slidesMd" class="text-center text-gray-500">
+      <p class="font-bold mb-1">No preview available</p>
+      <p class="text-xs">Confirm outline to generate slides.</p>
     </div>
-    <div v-else class="preview-shell">
+    <div v-else class="w-full h-full relative group">
       <iframe
         ref="iframeRef"
-        class="preview-frame"
+        class="w-full h-full border-none bg-[#0f1110]"
         :key="previewKey"
         :src="previewUrl"
         title="Slide preview"
@@ -17,7 +15,17 @@
         sandbox="allow-scripts allow-same-origin"
         @load="handleFrameLoad"
       ></iframe>
-      <div v-if="!frameReady" class="preview-footer">Loading preview...</div>
+      
+      <div class="absolute bottom-0 left-0 right-0 h-12 bg-black/80 backdrop-blur text-white flex items-center justify-between px-4 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <span class="text-gray-400" v-if="!frameReady">Loading preview...</span>
+        <span class="text-gray-400" v-else>Ready</span>
+        <div class="flex gap-2">
+          <button class="p-1 hover:text-primary"><span class="material-icons-outlined text-sm">chevron_left</span></button>
+          <span class="font-mono text-xs pt-0.5">-- / --</span>
+          <button class="p-1 hover:text-primary"><span class="material-icons-outlined text-sm">chevron_right</span></button>
+        </div>
+        <button class="p-1 hover:text-primary"><span class="material-icons-outlined text-sm">fullscreen</span></button>
+      </div>
     </div>
   </div>
 </template>

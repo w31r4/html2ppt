@@ -1,98 +1,96 @@
 <template>
-  <div class="workspace-page">
-    <header class="workspace-header">
-      <div class="header-title">
-        <h1>Workspace</h1>
-        <div class="status-pill" v-if="statusLabel">
-          <span class="status-dot"></span>
-          <span>{{ statusLabel }}</span>
+  <aside class="w-[400px] flex flex-col border-r border-border-light dark:border-border-dark bg-white dark:bg-[#1C1C1F] shrink-0 h-full relative z-10">
+    <div class="p-6 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+      <div>
+        <h2 class="font-bold text-xl text-gray-900 dark:text-white">Workspace</h2>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse" v-if="statusLabel"></span>
+          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ statusLabel || 'Ready' }}</span>
         </div>
       </div>
-      <div class="header-actions">
-        <button class="btn-ghost" type="button" @click="resetSession">
-          New Session
-        </button>
+      <button class="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-700 dark:text-gray-300" @click="resetSession">
+        New Session
+      </button>
+    </div>
+
+    <WorkspaceProgress :stage="store.stage" :status="store.status" :progress="store.progress" />
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar flex flex-col">
+      <div class="text-center mb-6">
+        <p class="text-xs text-gray-400 dark:text-gray-500">Today, {{ new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</p>
       </div>
-    </header>
+      
+      <ChatThread :messages="store.messages" />
+      
+      <div class="mt-auto pt-4">
+        <CommandBar :chips="chips" @append="appendChip" />
+      </div>
+    </div>
 
-    <main class="grid-shell">
-      <section class="chat-panel card">
-        <div class="card-header">
-          <div>
-            <h2>Conversation</h2>
-            <p>Collaborate with the agent to shape your deck.</p>
-          </div>
-        </div>
-        <div class="card-body">
-          <ChatThread :messages="store.messages" />
-          <CommandBar :chips="chips" @append="appendChip" />
-          <ChatComposer v-model="prompt" @send="send" />
-        </div>
-      </section>
+    <div class="p-4 border-t border-border-light dark:border-border-dark bg-white dark:bg-[#1C1C1F]">
+      <ChatComposer v-model="prompt" @send="send" />
+    </div>
+  </aside>
 
-      <section class="card preview-card">
-        <div class="card-header">
-          <div>
-            <h2>Live Preview</h2>
-            <p>Slidev output with Vue components rendered live.</p>
-          </div>
-          <div class="header-actions">
-            <button class="btn-ghost" type="button" :disabled="!store.result" @click="exportMarkdown">
-              Export Markdown
-            </button>
-            <button class="btn-primary" type="button" :disabled="!store.result" @click="exportZip">
-              Export ZIP
-            </button>
-          </div>
+  <main class="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark relative">
+    <div class="flex-1 p-6 pb-0 flex flex-col min-h-0">
+      <div class="flex justify-between items-center mb-4 px-1">
+        <div class="flex items-center gap-3">
+          <h2 class="font-bold text-2xl text-gray-900 dark:text-white">Live Preview</h2>
+          <span class="text-sm text-gray-500 dark:text-gray-400">Slidev output with Vue components</span>
         </div>
-        <div class="card-body">
-          <PreviewStage
-            :slides-md="store.result?.slides_md || ''"
-            :components="store.result?.components || []"
-          />
-          <div v-if="store.error" class="composer-hint" style="margin-top: 12px; color: #b24d3b;">
-            {{ store.error }}
-          </div>
+        <div class="flex gap-3">
+          <button class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-card-dark border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" :disabled="!store.result" @click="exportMarkdown">
+            Export Markdown
+          </button>
+          <button class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm shadow-primary/30 flex items-center gap-2" :disabled="!store.result" @click="exportZip">
+            <span class="material-icons-outlined text-sm">download</span>
+            Export ZIP
+          </button>
         </div>
-      </section>
-    </main>
+      </div>
+      
+      <div class="flex-1 bg-card-light dark:bg-card-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden flex flex-col relative group mb-6">
+        <PreviewStage
+          :slides-md="store.result?.slides_md || ''"
+          :components="store.result?.components || []"
+          class="h-full w-full"
+        />
+        <div v-if="store.error" class="absolute bottom-4 left-4 right-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+          {{ store.error }}
+        </div>
+      </div>
+    </div>
 
-    <section class="grid-shell" style="margin-top: 24px;">
-      <section class="card soft">
-        <StepTimeline :stage="store.stage" :status="store.status" :progress="store.progress" />
-      </section>
-      <section class="artifact-grid">
-        <div class="card">
-          <OutlineEditor
-            :outline="store.outline"
-            :status="store.status"
-            @save="saveOutline"
-            @confirm="confirmOutline"
-          />
-        </div>
-        <div class="card">
-          <CodeViewer :result="store.result" />
-        </div>
-      </section>
-    </section>
-  </div>
+    <div class="h-[300px] p-6 pt-0 grid grid-cols-2 gap-6 shrink-0">
+      <div class="bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col h-full overflow-hidden">
+        <OutlineEditor
+          :outline="store.outline"
+          :status="store.status"
+          @save="saveOutline"
+          @confirm="confirmOutline"
+        />
+      </div>
+      <div class="bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col h-full overflow-hidden">
+        <CodeViewer :result="store.result" />
+      </div>
+    </div>
+  </main>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-
 import { useSessionStore } from '@/stores/session';
 
 const store = useSessionStore();
 const prompt = ref('');
 
 const chips = [
-  'Make it technical and concise',
-  'Use a warm neutral palette',
-  'Add a comparison table',
-  'Include an animated hero slide',
-  'Focus on architecture diagrams',
-  'Keep it to 10 slides'
+  'Make it technical',
+  'Warm palette',
+  'Add comparison',
+  'Architecture diagrams',
+  '10 slides max'
 ];
 
 onMounted(() => {
@@ -131,6 +129,7 @@ const exportMarkdown = () => {
   if (!store.sessionId) return;
   window.open(`/api/export/${store.sessionId}`, '_blank');
 };
+
 const statusLabel = computed(() => {
   if (!store.status || store.status === 'idle') return '';
   const labels: Record<string, string> = {
@@ -146,34 +145,3 @@ const statusLabel = computed(() => {
   return labels[store.status] || store.status;
 });
 </script>
-
-<style scoped>
-.workspace-page {
-  animation: rise 0.6s ease both;
-}
-
-.workspace-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid rgba(230, 221, 208, 0.9);
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-title h1 {
-  font-family: var(--font-serif);
-  font-size: 2rem;
-  margin: 0;
-}
-
-.preview-card {
-  min-height: 600px;
-}
-</style>
