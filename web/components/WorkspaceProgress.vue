@@ -1,24 +1,18 @@
 <template>
-  <div class="px-6 py-5 border-b border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-gray-800/20">
-    <div class="flex justify-between items-center mb-3">
-      <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Progress</h3>
-      <span class="text-xs font-bold text-primary">{{ Math.round(progress * 100) }}%</span>
-    </div>
-    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-4 overflow-hidden">
-      <div class="bg-primary h-1.5 rounded-full transition-all duration-300" :style="{ width: progressPercent }"></div>
-    </div>
-    <div class="space-y-3">
-      <div v-for="step in steps" :key="step.id" class="flex items-start gap-3" :class="{ 'opacity-50': stepState(step.id) === 'pending' }">
-        <div 
-          class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-colors"
-          :class="getIconClass(step.id)"
-        >
-          <span class="material-icons-outlined text-[12px] text-white">{{ getIcon(step.id) }}</span>
+  <div class="px-6 py-3 border-b border-border-light dark:border-border-dark bg-white/70 dark:bg-[#15161a]/70 backdrop-blur">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 shrink-0">
+        <h3 class="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">Progress</h3>
+        <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ currentStepLabel }}</span>
+      </div>
+      <div class="flex-1 flex items-center gap-3">
+        <div class="w-full bg-gray-200/80 dark:bg-gray-700/60 rounded-full h-1.5 overflow-hidden">
+          <div
+            class="h-1.5 rounded-full bg-gradient-to-r from-primary to-primary-dark transition-all duration-300"
+            :style="{ width: progressPercent }"
+          ></div>
         </div>
-        <div>
-          <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ step.label }}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{{ step.description }}</p>
-        </div>
+        <span class="text-xs font-semibold text-primary tabular-nums">{{ Math.round(progress * 100) }}%</span>
       </div>
     </div>
   </div>
@@ -56,29 +50,9 @@ const currentStep = computed(() => {
   return 'outline';
 });
 
-const stepState = (id: string) => {
-  if (props.status === 'error') {
-    return 'error';
-  }
-  const order = steps.map((step) => step.id);
-  const currentIndex = order.indexOf(currentStep.value);
-  const index = order.indexOf(id);
-  if (index < currentIndex) return 'complete';
-  if (index === currentIndex) return 'active';
-  return 'pending';
-};
-
-const getIconClass = (id: string) => {
-  const state = stepState(id);
-  if (state === 'complete') return 'bg-primary';
-  if (state === 'active') return 'bg-primary shadow-sm shadow-primary/30';
-  return 'bg-gray-300 dark:bg-gray-600';
-};
-
-const getIcon = (id: string) => {
-  const state = stepState(id);
-  if (state === 'complete') return 'check';
-  if (state === 'active') return 'edit';
-  return 'circle';
-};
+const currentStepLabel = computed(() => {
+  if (props.status === 'error' || props.stage === 'error') return 'Error';
+  const match = steps.find((step) => step.id === currentStep.value);
+  return match?.label ?? 'Outline';
+});
 </script>

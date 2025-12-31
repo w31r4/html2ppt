@@ -7,12 +7,12 @@
       </div>
       <span class="px-2 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-500">{{ badgeText }}</span>
     </div>
-    <div class="bg-[#1e1e1e] rounded-xl flex-1 overflow-hidden flex flex-col font-mono text-sm border border-gray-800 shadow-inner">
-      <div class="bg-[#2d2d2d] px-4 py-2 text-xs text-gray-400 border-b border-gray-700 flex gap-4">
+    <div class="bg-[#15171c] rounded-2xl flex-1 overflow-hidden flex flex-col font-mono text-sm border border-[#2b2f36] shadow-inner">
+      <div class="bg-[#1f242b] px-4 py-2 text-xs text-gray-400 border-b border-[#2b2f36] flex gap-4">
         <span class="text-white border-b-2 border-primary pb-1.5 -mb-2 cursor-pointer">slides.md</span>
         <span class="hover:text-gray-200 cursor-pointer" v-if="result?.components?.length">Components</span>
       </div>
-      <div class="p-4 overflow-y-auto custom-scrollbar text-gray-300 leading-relaxed h-full">
+      <div class="p-4 overflow-y-auto custom-scrollbar text-gray-300 leading-6 h-full">
         <div v-if="!result">
           <p class="text-gray-500 italic">Generate a deck to inspect artifacts.</p>
         </div>

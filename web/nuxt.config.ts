@@ -1,6 +1,7 @@
 export default defineNuxtConfig({
-  modules: ['@pinia/nuxt'],
+  modules: ['@pinia/nuxt', '@unocss/nuxt'],
   css: ['@/assets/styles/main.css'],
+  compatibilityDate: '2025-12-31',
   app: {
     baseURL: process.env.NUXT_APP_BASE_URL || '/agent/',
     head: {

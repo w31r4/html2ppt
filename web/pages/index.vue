@@ -1,5 +1,5 @@
 <template>
-  <aside class="w-[400px] flex flex-col border-r border-border-light dark:border-border-dark bg-white dark:bg-[#1C1C1F] shrink-0 h-full relative z-10">
+  <aside class="w-[400px] flex flex-col border-r border-border-light dark:border-border-dark bg-white/90 dark:bg-[#15161a]/90 shrink-0 h-full relative z-10 backdrop-blur">
     <div class="p-6 border-b border-border-light dark:border-border-dark flex justify-between items-center">
       <div>
         <h2 class="font-bold text-xl text-gray-900 dark:text-white">Workspace</h2>
@@ -8,7 +8,7 @@
           <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ statusLabel || 'Ready' }}</span>
         </div>
       </div>
-      <button class="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-700 dark:text-gray-300" @click="resetSession">
+      <button class="px-3 py-1.5 text-xs font-medium bg-gray-100/80 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors text-gray-700 dark:text-gray-300 shadow-sm" @click="resetSession">
         New Session
       </button>
     </div>
@@ -27,52 +27,54 @@
       </div>
     </div>
 
-    <div class="p-4 border-t border-border-light dark:border-border-dark bg-white dark:bg-[#1C1C1F]">
+    <div class="p-4 border-t border-border-light dark:border-border-dark bg-white/90 dark:bg-[#15161a]/90">
       <ChatComposer v-model="prompt" @send="send" />
     </div>
   </aside>
 
   <main class="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark relative">
-    <div class="flex-1 p-6 pb-0 flex flex-col min-h-0">
-      <div class="flex justify-between items-center mb-4 px-1">
-        <div class="flex items-center gap-3">
-          <h2 class="font-bold text-2xl text-gray-900 dark:text-white">Live Preview</h2>
-          <span class="text-sm text-gray-500 dark:text-gray-400">Slidev output with Vue components</span>
+    <div class="flex-1 overflow-y-auto custom-scrollbar">
+      <div class="p-6 flex flex-col gap-6 min-h-0">
+        <div class="flex justify-between items-center px-1">
+          <div class="flex items-center gap-3">
+            <h2 class="font-bold text-2xl text-gray-900 dark:text-white">Live Preview</h2>
+            <span class="text-sm text-gray-500 dark:text-gray-400">Slidev output with Vue components</span>
+          </div>
+          <div class="flex gap-3">
+            <button class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white/80 dark:bg-card-dark border border-gray-200/80 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" :disabled="!store.result" @click="exportMarkdown">
+              Export Markdown
+            </button>
+            <button class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/30 flex items-center gap-2" :disabled="!store.result" @click="exportZip">
+              <span class="material-icons-outlined text-sm">download</span>
+              Export ZIP
+            </button>
+          </div>
         </div>
-        <div class="flex gap-3">
-          <button class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-card-dark border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" :disabled="!store.result" @click="exportMarkdown">
-            Export Markdown
-          </button>
-          <button class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm shadow-primary/30 flex items-center gap-2" :disabled="!store.result" @click="exportZip">
-            <span class="material-icons-outlined text-sm">download</span>
-            Export ZIP
-          </button>
+        
+        <div class="bg-card-light dark:bg-card-dark rounded-3xl shadow-[0_20px_45px_rgba(15,23,42,0.12)] border border-border-light dark:border-border-dark overflow-hidden flex flex-col relative group h-[55vh] min-h-[360px]">
+          <PreviewStage
+            :slides-md="store.result?.slides_md || ''"
+            :components="store.result?.components || []"
+            class="h-full w-full"
+          />
+          <div v-if="store.error" class="absolute bottom-4 left-4 right-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {{ store.error }}
+          </div>
         </div>
-      </div>
-      
-      <div class="flex-1 bg-card-light dark:bg-card-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden flex flex-col relative group mb-6">
-        <PreviewStage
-          :slides-md="store.result?.slides_md || ''"
-          :components="store.result?.components || []"
-          class="h-full w-full"
-        />
-        <div v-if="store.error" class="absolute bottom-4 left-4 right-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-          {{ store.error }}
-        </div>
-      </div>
-    </div>
 
-    <div class="h-[300px] p-6 pt-0 grid grid-cols-2 gap-6 shrink-0">
-      <div class="bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col h-full overflow-hidden">
-        <OutlineEditor
-          :outline="store.outline"
-          :status="store.status"
-          @save="saveOutline"
-          @confirm="confirmOutline"
-        />
-      </div>
-      <div class="bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col h-full overflow-hidden">
-        <CodeViewer :result="store.result" />
+        <div class="grid grid-cols-2 gap-6 pb-6 min-h-[480px]">
+          <div class="bg-card-light dark:bg-card-dark rounded-3xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col overflow-hidden h-[clamp(420px,45vh,640px)]">
+            <OutlineEditor
+              :outline="store.outline"
+              :status="store.status"
+              @save="saveOutline"
+              @confirm="confirmOutline"
+            />
+          </div>
+          <div class="bg-card-light dark:bg-card-dark rounded-3xl p-5 shadow-sm border border-border-light dark:border-border-dark flex flex-col overflow-hidden h-[clamp(420px,45vh,640px)]">
+            <CodeViewer :result="store.result" />
+          </div>
+        </div>
       </div>
     </div>
   </main>
