@@ -17,6 +17,8 @@ services:
         condition: service_healthy
       vue-preview:
         condition: service_started
+      agent-web:
+        condition: service_started
     networks:
       - html2ppt-network
 
@@ -53,6 +55,22 @@ services:
       dockerfile: Dockerfile
     container_name: html2ppt-vue-preview
     restart: unless-stopped
+    networks:
+      - html2ppt-network
+
+  # ==========================================================================
+  # Agent Web UI - Nuxt frontend (new)
+  # ==========================================================================
+  agent-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: html2ppt-agent-web
+    restart: unless-stopped
+    environment:
+      - NUXT_APP_BASE_URL=/agent/
+      - NUXT_PUBLIC_API_BASE=/api
+      - NUXT_PUBLIC_PREVIEW_BASE=/preview
     networks:
       - html2ppt-network
 

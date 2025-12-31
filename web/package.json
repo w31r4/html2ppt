@@ -1,0 +1,19 @@
+{
+  "name": "agent-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --host 0.0.0.0 --port 3000",
+    "build": "nuxt build",
+    "start": "node .output/server/index.mjs"
+  },
+  "dependencies": {
+    "@pinia/nuxt": "^0.5.1",
+    "@unocss/nuxt": "^0.60.4",
+    "nuxt": "^3.12.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}

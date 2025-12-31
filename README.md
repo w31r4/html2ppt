@@ -52,7 +52,8 @@ docker compose up -d
 docker compose logs -f
 
 # 单独查看前端/后端日志
-docker compose logs -f frontend
+docker compose logs -f agent-web
+docker compose logs -f streamlit
 docker compose logs -f backend
 
 # 停止服务
@@ -62,7 +63,8 @@ docker compose down
 docker compose up -d --build
 
 # 单独重建某个服务
-docker compose up -d --build frontend
+docker compose up -d --build agent-web
+docker compose up -d --build streamlit
 docker compose up -d --build backend
 
 # 查看数据卷
@@ -85,6 +87,11 @@ docker volume ls | grep html2ppt
 │        │                 │   :8501      │                        │
 │        │                 └──────────────┘                        │
 │        │                                                         │
+│        ├── /agent/*   → ┌──────────────┐                         │
+│        │               │  agent-web   │  Agent 对话式前端         │
+│        │               │   :3000      │  (Nuxt 3)                 │
+│        │               └──────────────┘                           │
+│        │                                                         │
 │        ├── /api/*      → ┌──────────────┐                        │
 │        │                 │   backend    │  FastAPI 纯API服务     │
 │        │                 │   :8000      │                        │
@@ -102,10 +109,59 @@ docker volume ls | grep html2ppt
 **服务说明：**
 - **nginx** - 入口网关，路由分发
 - **streamlit** - Python 全栈 Web 界面
+- **agent-web** - Nuxt 3 对话式前端（新）
 - **backend** - FastAPI REST API
 - **vue-preview** - 独立的 Slidev 浏览器端预览服务
 
 ---
+
+### 🧭 开发/部署双模式快速指南
+
+支持“本地开发 + Docker 部署”并行使用：本地调试快，Docker 部署稳。端口不冲突。
+
+**本地开发（Dev）**
+
+```bash
+# 1. 安装依赖
+uv sync
+
+# 2. 启动后端（默认 8000）
+python -m html2ppt.cli
+# 或：uvicorn src.html2ppt.api.app:app --reload --port 8000
+
+# 3. 启动预览服务（默认 5173）
+cd vue-preview-service
+npm install
+npm run dev
+cd ..
+
+# 4. 启动 Streamlit（默认 8501）
+API_BASE_URL=http://localhost:8000/api \
+VUE_PREVIEW_URL=http://localhost:5173 \
+streamlit run streamlit_app/app.py --server.port 8501
+
+# 5. 启动 Agent Web UI（默认 3000）
+cd web
+npm install
+NUXT_PUBLIC_API_BASE=http://localhost:8000/api \
+NUXT_PUBLIC_PREVIEW_BASE=http://localhost:5173 \
+NUXT_APP_BASE_URL=/agent/ \
+npm run dev
+```
+
+访问 http://localhost:8501 与 http://localhost:3000/agent
+
+**Docker 部署（Prod）**
+
+```bash
+docker compose up -d --build
+```
+
+访问 http://localhost:8912 或 http://localhost:8912/agent
+
+**端口/路径提示**
+- 本地开发使用 8000/8501/5173/3000；Docker 入口是 8912
+- Docker 模式下 Agent UI 路径为 `/agent`，预览路径为 `/preview`，下载路径为 `/api`
 
 ### 手动安装
 
@@ -264,6 +320,7 @@ html2ppt/
 │   ├── src/                # 源码
 │   ├── Dockerfile          # Docker 构建文件
 │   └── package.json        # 依赖配置
+├── web/                    # Agent Web UI (Nuxt 3)
 ├── nginx/                  # Nginx 配置
 │   ├── nginx.conf          # 路由配置
 │   └── Dockerfile          # Nginx Docker 构建文件
