@@ -1,31 +1,25 @@
 <template>
-  <div class="code-panel">
-    <div class="card-header">
+  <div class="flex flex-col h-full">
+    <div class="flex justify-between items-center mb-4 shrink-0">
       <div>
-        <h3>Artifacts</h3>
-        <p>Slides markdown and generated components.</p>
+        <h3 class="font-bold text-lg text-gray-900 dark:text-white">Artifacts</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Slides markdown and generated components.</p>
       </div>
-      <span class="badge">{{ badgeText }}</span>
+      <span class="px-2 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-500">{{ badgeText }}</span>
     </div>
-    <div class="card-body">
-      <div v-if="!result">
-        <p class="composer-hint">Generate a deck to inspect the Slidev output.</p>
+    <div class="bg-[#1e1e1e] rounded-xl flex-1 overflow-hidden flex flex-col font-mono text-sm border border-gray-800 shadow-inner">
+      <div class="bg-[#2d2d2d] px-4 py-2 text-xs text-gray-400 border-b border-gray-700 flex gap-4">
+        <span class="text-white border-b-2 border-primary pb-1.5 -mb-2 cursor-pointer">slides.md</span>
+        <span class="hover:text-gray-200 cursor-pointer" v-if="result?.components?.length">Components</span>
       </div>
-      <template v-else>
-        <div>
-          <strong>slides.md</strong>
-          <pre>{{ result.slides_md }}</pre>
+      <div class="p-4 overflow-y-auto custom-scrollbar text-gray-300 leading-relaxed h-full">
+        <div v-if="!result">
+          <p class="text-gray-500 italic">Generate a deck to inspect artifacts.</p>
         </div>
-        <div v-if="result.components?.length">
-          <strong>Components</strong>
-          <div class="code-panel" style="margin-top: 8px;">
-            <details v-for="component in result.components" :key="component.name">
-              <summary>{{ component.name }}</summary>
-              <pre>{{ component.code }}</pre>
-            </details>
-          </div>
-        </div>
-      </template>
+        <template v-else>
+          <pre class="whitespace-pre-wrap">{{ result.slides_md }}</pre>
+        </template>
+      </div>
     </div>
   </div>
 </template>
