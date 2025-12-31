@@ -19,9 +19,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
 
     # Setup logging
+    log_format = settings.log_format.lower()
+    json_format = log_format == "json"
+    if log_format == "auto":
+        json_format = not settings.debug
     setup_logging(
         level=settings.log_level,
-        json_format=not settings.debug,
+        json_format=json_format,
     )
 
     logger.info(

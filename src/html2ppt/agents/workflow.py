@@ -761,6 +761,7 @@ class PresentationWorkflow:
 
         try:
             title = outline.title if outline else "Presentation"
+            settings = get_settings()
 
             # Assemble each component
             for component in components:
@@ -772,12 +773,17 @@ class PresentationWorkflow:
                 slides.append(slide)
 
             # Assemble slides.md
+            global_frontmatter = {
+                "theme": "default",
+                "title": title,
+            }
+            if settings.slidev_canvas_width:
+                global_frontmatter["canvasWidth"] = settings.slidev_canvas_width
+            if settings.slidev_aspect_ratio:
+                global_frontmatter["aspectRatio"] = settings.slidev_aspect_ratio
             slides_md = self._assemble_slides_md(
                 slides,
-                global_frontmatter={
-                    "theme": "default",
-                    "title": title,
-                },
+                global_frontmatter=global_frontmatter,
             )
 
             logger.info(

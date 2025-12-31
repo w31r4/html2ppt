@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     app_name: str = Field(default="HTML2PPT", description="Application name")
     debug: bool = Field(default=False, description="Enable debug mode")
     log_level: str = Field(default="INFO", description="Logging level")
+    log_format: str = Field(
+        default="pretty",
+        description="Logging output format: pretty or json",
+    )
 
     # Server Settings
     host: str = Field(default="0.0.0.0", description="Server host")
@@ -185,6 +189,17 @@ class Settings(BaseSettings):
     pagination_continuation_suffix: str = Field(
         default=" (续)",
         description="Suffix appended to continuation slide titles",
+    )
+
+    # Slidev Settings
+    slidev_canvas_width: Optional[int] = Field(
+        default=None,
+        ge=1,
+        description="Slidev canvas width (frontmatter canvasWidth)",
+    )
+    slidev_aspect_ratio: Optional[str] = Field(
+        default=None,
+        description="Slidev aspect ratio (frontmatter aspectRatio, e.g. 16/9)",
     )
 
     # Storage Settings

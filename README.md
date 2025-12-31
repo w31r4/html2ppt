@@ -71,6 +71,10 @@ docker compose up -d --build backend
 docker volume ls | grep html2ppt
 ```
 
+**日志格式：**
+- 默认使用 pretty 输出（带高亮，更易读）
+- 需要 JSON 机器可读时，设置 `HTML2PPT_LOG_FORMAT=json`
+
 **架构说明：**
 
 ```
@@ -418,6 +422,41 @@ Pagination Review 是“超出画布自动拆分”的兜底阶段：在 Vue 生
 - `HTML2PPT_PAGINATION_MAX_TABLE_ROWS`：表格最大行数（默认 8）
 
 完整配置见 [`.env.example`](.env.example:1)。
+
+## 🖼️ Slidev 画布尺寸与填充
+
+Slidev 默认画布：
+
+- `canvasWidth`: 980px
+- `aspectRatio`: 16/9
+- 默认高度约 551.25px（980 / (16/9)）
+
+如果遇到“填不满”或展示设备比例不一致，可通过 `.env` 调整全局画布：
+
+```env
+HTML2PPT_SLIDEV_CANVAS_WIDTH=1920
+HTML2PPT_SLIDEV_ASPECT_RATIO=16/9
+```
+
+这些值会写入 `slides.md` 顶部 frontmatter，例如：
+
+```yaml
+---
+theme: default
+title: Your Deck
+canvasWidth: 980
+aspectRatio: 16/9
+---
+```
+
+也可以在单页 frontmatter 使用 `zoom` 做局部缩放：
+
+```markdown
+---
+layout: default
+zoom: 1.1
+---
+```
 
 
 ## ▶️ 与 Slidev 配合使用（详细）
