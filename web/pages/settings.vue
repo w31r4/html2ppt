@@ -49,12 +49,23 @@
           </div>
 
           <div class="form-group">
-            <label>Model</label>
+            <label>Model Preset</label>
             <select v-model="settings.model" class="input-field">
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+              <option v-for="option in modelOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
             </select>
+            <span class="hint">Choose a preset or override with a custom model name.</span>
+          </div>
+          <div class="form-group">
+            <label>Custom Model</label>
+            <input
+              v-model="settings.customModel"
+              type="text"
+              placeholder="e.g. gpt-4o-mini, claude-3-5-sonnet"
+              class="input-field"
+            />
+            <span class="hint">When filled, this value will be used instead of the preset.</span>
           </div>
         </div>
       </section>
@@ -65,14 +76,27 @@
         </div>
         <div class="card-body">
           <div class="form-group">
+            <label>Base URL</label>
+            <input
+              v-model="settings.baseUrl"
+              type="text"
+              placeholder="https://api.openai.com/v1"
+              class="input-field"
+            />
+            <span class="hint">Leave empty to use the server .env default. Common for OpenAI-compatible gateways.</span>
+          </div>
+          <div class="form-group">
             <label>API Key</label>
-            <input 
-              type="password" 
-              v-model="settings.apiKey" 
+            <input
+              type="password"
+              v-model="settings.apiKey"
               placeholder="sk-..."
               class="input-field"
             />
-            <span class="hint">Your OpenAI or Anthropic API key. Leave empty to use server environment variables.</span>
+            <span class="hint">
+              Leave empty to use server environment variables.
+              <strong v-if="settingsStore.isConfigured"> Server key detected.</strong>
+            </span>
           </div>
         </div>
       </section>
@@ -92,20 +116,47 @@ import { useSettingsStore } from '@/stores/settings';
 
 const settingsStore = useSettingsStore();
 const settings = ref({ ...settingsStore.$state });
+const modelOptions = [
+  { value: 'gpt-4o', label: 'GPT-4o' },
+  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+  { value: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet' }
+];
 
 onMounted(() => {
   settingsStore.initSettings();
-  settings.value = { ...settingsStore.$state };
+  settingsStore.fetchServerSettings().then(() => {
+    settings.value = { ...settingsStore.$state };
+    syncModelSelection();
+  });
 });
 
-const saveSettings = () => {
+const syncModelSelection = () => {
+  const match = modelOptions.find((option) => option.value === settings.value.model);
+  if (match) {
+    settings.value.customModel = '';
+    return;
+  }
+  settings.value.customModel = settings.value.model;
+  settings.value.model = modelOptions[0].value;
+};
+
+const saveSettings = async () => {
   settingsStore.updateSettings(settings.value);
-  // Show toast or feedback here
+  const modelValue = settings.value.customModel.trim() || settings.value.model;
+  await settingsStore.saveLlmSettings({
+    model: modelValue,
+    baseUrl: settings.value.baseUrl,
+    apiKey: settings.value.apiKey
+  });
 };
 
 const resetDefaults = () => {
   settingsStore.resetSettings();
   settings.value = { ...settingsStore.$state };
+  settingsStore.fetchServerSettings().then(() => {
+    settings.value = { ...settingsStore.$state };
+    syncModelSelection();
+  });
 };
 </script>
 
