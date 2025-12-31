@@ -1,3 +1,6 @@
+/* Material Icons */
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Outlined');
+
 :root {
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -36,9 +39,6 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(156, 163, 175, 0.5);
 }
-
-/* Material Icons */
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Outlined');
 
 .material-icons-outlined {
   font-family: 'Material Icons Outlined';
