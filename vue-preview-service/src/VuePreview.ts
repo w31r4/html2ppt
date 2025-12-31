@@ -1,10 +1,15 @@
-import { createApp, h } from 'vue';
+import { createApp, h, type Component } from 'vue';
 import { SlideRenderer, SlidesRender, type RendererOptions, type SlideSource } from 'slidev-parser';
 import 'slidev-parser/index.css';
 
 export interface PreviewState {
   app: ReturnType<typeof createApp> | null;
 }
+
+type SlideSlotProps = {
+  component: Component;
+  index: number;
+};
 
 export function createPreviewState(): PreviewState {
   return {
@@ -53,12 +58,30 @@ export async function renderVueComponent(
     throw new Error('No valid Slidev slides parsed.');
   }
 
+  const slideBaseId = `preview-${Math.random().toString(36).slice(2, 8)}`;
+
   state.app = createApp({
     setup() {
-      return () => h(SlidesRender, {
-        slides,
-        rendererOptions,
-      });
+      return () =>
+        h(
+          SlidesRender,
+          {
+            slides,
+            rendererOptions,
+            id: slideBaseId,
+          },
+          {
+            slide: ({ component, index }: SlideSlotProps) =>
+              h(
+                'div',
+                {
+                  class: 'preview-scale-target',
+                  'data-slide-index': index,
+                },
+                [h(component, { id: `${slideBaseId}-${index}` })]
+              ),
+          }
+        );
     },
   });
 

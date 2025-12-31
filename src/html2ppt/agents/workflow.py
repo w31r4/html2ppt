@@ -11,6 +11,7 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError
 
 from html2ppt.agents.design_director import DesignDirectorAgent
+from html2ppt.agents.fit_scale import inject_fit_scale_helper
 from html2ppt.agents.llm_factory import create_llm
 from html2ppt.agents.pagination import (
     build_outline_markdown,
@@ -692,6 +693,8 @@ class PresentationWorkflow:
                                 section=section.title,
                                 error=str(exc),
                             )
+
+                    code = inject_fit_scale_helper(code)
 
                     component = VueComponent(
                         name=component_names[index],

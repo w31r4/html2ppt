@@ -4,9 +4,64 @@ const state = createPreviewState();
 
 type ComponentMap = Record<string, string>;
 
+let adaptiveScaleContainer: HTMLElement | null = null;
+let adaptiveScaleFrame: number | null = null;
+let adaptiveResizeObserver: ResizeObserver | null = null;
+let adaptiveMutationObserver: MutationObserver | null = null;
+
 function decodeBase64(value: string): string {
   const bytes = Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
   return new TextDecoder().decode(bytes);
+}
+
+function scheduleAdaptiveScale(containerEl: HTMLElement): void {
+  if (adaptiveScaleFrame !== null) {
+    cancelAnimationFrame(adaptiveScaleFrame);
+  }
+  adaptiveScaleFrame = requestAnimationFrame(() => {
+    adaptiveScaleFrame = null;
+    applyAdaptiveScale(containerEl);
+  });
+}
+
+function applyAdaptiveScale(containerEl: HTMLElement): void {
+  const targets = containerEl.querySelectorAll<HTMLElement>('.preview-scale-target');
+  targets.forEach((target) => {
+    const slideInner = target.closest<HTMLElement>('.slide-inner');
+    if (!slideInner) return;
+
+    const availableWidth = slideInner.clientWidth;
+    const availableHeight = slideInner.clientHeight;
+    if (!availableWidth || !availableHeight) return;
+
+    const contentWidth = target.scrollWidth;
+    const contentHeight = target.scrollHeight;
+    if (!contentWidth || !contentHeight) return;
+
+    const fitScale = Math.min(
+      1,
+      availableWidth / contentWidth,
+      availableHeight / contentHeight
+    );
+
+    target.style.transform = `scale(${fitScale})`;
+  });
+}
+
+function ensureAdaptiveScaling(containerEl: HTMLElement): void {
+  if (adaptiveScaleContainer !== containerEl) {
+    adaptiveScaleContainer = containerEl;
+    adaptiveResizeObserver?.disconnect();
+    adaptiveMutationObserver?.disconnect();
+
+    adaptiveResizeObserver = new ResizeObserver(() => scheduleAdaptiveScale(containerEl));
+    adaptiveResizeObserver.observe(containerEl);
+
+    adaptiveMutationObserver = new MutationObserver(() => scheduleAdaptiveScale(containerEl));
+    adaptiveMutationObserver.observe(containerEl, { childList: true, subtree: true });
+  }
+
+  scheduleAdaptiveScale(containerEl);
 }
 
 function getCodeFromUrl(): string | null {
@@ -98,6 +153,7 @@ async function renderPreview(): Promise<void> {
     // Remove loading message
     const loadingEl = document.getElementById('loading');
     if (loadingEl) loadingEl.remove();
+    ensureAdaptiveScaling(containerEl);
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : 'Failed to render component';
     showError(errorMsg);
@@ -128,6 +184,7 @@ window.addEventListener('message', async (event) => {
     try {
       const rendererOptions = components ? { sfcComponents: components } : undefined;
       await renderVueComponent(code, containerEl, mountEl, state, rendererOptions);
+      ensureAdaptiveScaling(containerEl);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Failed to render component';
       showError(errorMsg);
