@@ -8,19 +8,20 @@
     </div>
     <iframe
       v-else
+      ref="iframeRef"
       class="preview-frame"
       :key="previewKey"
       :src="previewUrl"
       title="Slide preview"
       loading="lazy"
       sandbox="allow-scripts allow-same-origin"
+      @load="handleFrameLoad"
     ></iframe>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { ComponentArtifact } from '@/stores/session';
-import { encodeBase64, encodeJsonBase64 } from '@/utils/encoding';
 
 const props = defineProps<{
   slidesMd: string;
@@ -28,7 +29,31 @@ const props = defineProps<{
 }>();
 
 const config = useRuntimeConfig();
-const previewBase = computed(() => (config.public.previewBase || '/preview').replace(/\/$/, ''));
+const previewBase = computed(() => {
+  const raw = (config.public.previewBase || '/preview').replace(/\/$/, '');
+  if (
+    process.client &&
+    raw === '/preview' &&
+    window.location.hostname === 'localhost' &&
+    (process.dev || import.meta.dev)
+  ) {
+    return 'http://localhost:5173';
+  }
+  return raw;
+});
+
+const previewOrigin = computed(() => {
+  if (!process.client) return '';
+  const raw = previewBase.value;
+  if (raw.startsWith('http')) {
+    try {
+      return new URL(raw).origin;
+    } catch {
+      return window.location.origin;
+    }
+  }
+  return window.location.origin;
+});
 
 const componentsMap = computed(() => {
   if (!props.components?.length) return null;
@@ -42,16 +67,45 @@ const componentsMap = computed(() => {
 
 const previewUrl = computed(() => {
   if (!props.slidesMd) return '';
-  const codeParam = encodeBase64(props.slidesMd);
-  const params = new URLSearchParams({ code: codeParam });
-  if (componentsMap.value) {
-    params.set('components', encodeJsonBase64(componentsMap.value));
-  }
-  return `${previewBase.value}/?${params.toString()}`;
+  return `${previewBase.value}/?mode=post`;
 });
 
 const previewKey = computed(() => {
   const componentCount = props.components?.length || 0;
   return `${props.slidesMd.length}-${componentCount}`;
 });
+
+const iframeRef = ref<HTMLIFrameElement | null>(null);
+const frameReady = ref(false);
+
+const sendPreviewMessage = () => {
+  if (!frameReady.value || !props.slidesMd) return;
+  const target = iframeRef.value?.contentWindow;
+  if (!target) return;
+  target.postMessage(
+    {
+      type: 'preview-code',
+      code: props.slidesMd,
+      components: componentsMap.value ?? undefined
+    },
+    previewOrigin.value || '*'
+  );
+};
+
+const handleFrameLoad = () => {
+  frameReady.value = true;
+  sendPreviewMessage();
+};
+
+watch(
+  [() => props.slidesMd, componentsMap],
+  () => {
+    if (!props.slidesMd) {
+      frameReady.value = false;
+      return;
+    }
+    sendPreviewMessage();
+  },
+  { deep: true }
+);
 </script>

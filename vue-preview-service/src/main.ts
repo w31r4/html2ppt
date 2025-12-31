@@ -80,10 +80,14 @@ async function renderPreview(): Promise<void> {
     return;
   }
   
+  const params = new URLSearchParams(window.location.search);
   const code = getCodeFromUrl();
   const components = getComponentsFromUrl();
   
   if (!code) {
+    if (params.get('mode') === 'post') {
+      return;
+    }
     showError('No content provided. Use ?code=base64_encoded_slidev_markdown');
     return;
   }
