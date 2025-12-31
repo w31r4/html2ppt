@@ -45,6 +45,7 @@ const currentStep = computed(() => {
   if (stage === 'error') return 'error';
   if (stage === 'completed') return 'ready';
   if (stage === 'slidev_assembling') return 'assemble';
+  if (stage === 'pagination_review') return 'assemble';
   if (stage === 'vue_completed') return 'assemble';
   if (stage === 'vue_generating') return 'components';
   if (stage === 'outline_confirmed') return 'design';

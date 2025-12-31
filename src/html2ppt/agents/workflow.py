@@ -1,16 +1,30 @@
 """LangGraph workflow for presentation generation."""
 
 import asyncio
+import json
 import re
 from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
+from pydantic import BaseModel, Field, ValidationError
 
 from html2ppt.agents.design_director import DesignDirectorAgent
 from html2ppt.agents.llm_factory import create_llm
-from html2ppt.agents.prompts import get_outline_prompt, get_vue_fix_prompt, get_vue_prompt
+from html2ppt.agents.pagination import (
+    build_outline_markdown,
+    build_pagination_config,
+    build_sections_from_groups,
+    section_overflows,
+    split_section_rules,
+)
+from html2ppt.agents.prompts import (
+    get_outline_prompt,
+    get_pagination_refiner_prompt,
+    get_vue_fix_prompt,
+    get_vue_prompt,
+)
 from html2ppt.agents.reflection_reviewer import ReflectionReviewer
 from html2ppt.agents.research import ResearchAgent
 from html2ppt.agents.state import (
@@ -32,11 +46,16 @@ from html2ppt.agents.validators import (
 from html2ppt.config.llm import LLMConfig
 from html2ppt.config.logging import get_logger
 from html2ppt.config.reflection import ReflectionConfig
+from html2ppt.config.settings import get_settings
 
 logger = get_logger(__name__)
 
 # Maximum number of validation fix retries
 MAX_VALIDATION_RETRIES = 3
+
+
+class _PaginationRefinerPayload(BaseModel):
+    groups: list[list[str]] = Field(default_factory=list)
 
 
 def _extract_code_block(text: str, language: str = "") -> str:
@@ -62,6 +81,11 @@ def _extract_code_block(text: str, language: str = "") -> str:
         return match.group(1).strip()
 
     return text.strip()
+
+
+def _extract_json_block(text: str) -> str:
+    match = re.search(r"\{[\s\S]*\}", text)
+    return match.group(0) if match else text
 
 
 def _sanitize_component_name(title: str) -> str:
@@ -137,6 +161,7 @@ class PresentationWorkflow:
         graph.add_node("human_review", self._human_review_node)
         graph.add_node("design_director", self._design_director_node)
         graph.add_node("generate_vue", self._generate_vue_node)
+        graph.add_node("pagination_review", self._pagination_review_node)
         graph.add_node("assemble_slidev", self._assemble_slidev_node)
 
         # Add edges
@@ -154,9 +179,17 @@ class PresentationWorkflow:
             },
         )
 
-        # Design director → Vue generation → Assembly
+        # Design director → Vue generation → Pagination → Assembly
         graph.add_edge("design_director", "generate_vue")
-        graph.add_edge("generate_vue", "assemble_slidev")
+        graph.add_edge("generate_vue", "pagination_review")
+        graph.add_conditional_edges(
+            "pagination_review",
+            self._route_after_pagination,
+            {
+                "regenerate": "generate_vue",
+                "assemble": "assemble_slidev",
+            },
+        )
         graph.add_edge("assemble_slidev", END)
 
         return graph
@@ -297,6 +330,155 @@ class PresentationWorkflow:
             return "regenerate"
 
         return "continue"
+
+    def _route_after_pagination(self, state: WorkflowState) -> Literal["regenerate", "assemble"]:
+        """Route after pagination review."""
+        if state.get("pagination_needs_regen"):
+            return "regenerate"
+        return "assemble"
+
+    async def _pagination_review_node(self, state: WorkflowState) -> dict:
+        """Review and split outline sections before Slidev assembly."""
+        settings = get_settings()
+        config = build_pagination_config(settings)
+
+        outline = state.get("outline")
+        if not outline:
+            outline_md = state.get("outline_markdown") or ""
+            outline = Outline.from_markdown(outline_md) if outline_md else None
+        if not outline:
+            return set_error(state, "未找到大纲，无法进行分页检查")
+
+        passes = state.get("pagination_passes", 0) + 1
+        warnings = list(state.get("pagination_warnings", []))
+        needs_split = any(section_overflows(section, config) for section in outline.sections)
+
+        progress = max(state.get("progress", 0.0), 0.82)
+
+        if not config.enabled:
+            return {
+                "pagination_passes": passes,
+                "pagination_warnings": warnings,
+                "pagination_needs_regen": False,
+                "stage": WorkflowStage.PAGINATION_REVIEW,
+                "progress": progress,
+            }
+
+        if passes > config.max_passes and needs_split:
+            warnings.append("Pagination reached max passes; proceeding without further splits.")
+            return {
+                "pagination_passes": passes,
+                "pagination_warnings": warnings,
+                "pagination_needs_regen": False,
+                "stage": WorkflowStage.PAGINATION_REVIEW,
+                "progress": progress,
+            }
+
+        new_sections: list[OutlineSection] = []
+        changed = False
+
+        for section in outline.sections:
+            split_sections, split_warnings, split_changed, overflow = split_section_rules(section, config)
+            warnings.extend(split_warnings)
+
+            if overflow and config.refiner_enabled and section.points:
+                refined = await self._refine_pagination_groups(section, config, state.get("session_id"))
+                if refined:
+                    max_sections = 1 + max(config.max_splits_per_section, 0)
+                    if len(refined) > max_sections:
+                        warnings.append(
+                            f"Pagination guardrail hit for '{section.title}': refiner groups "
+                            f"{len(refined)} exceed max {max_sections}. Merging overflow content."
+                        )
+                        merged = refined[: max_sections - 1]
+                        remainder = [point for group in refined[max_sections - 1 :] for point in group]
+                        merged.append(remainder)
+                        refined = merged
+                    split_sections = build_sections_from_groups(section, refined, config)
+                    split_changed = True
+                    overflow = any(section_overflows(candidate, config) for candidate in split_sections)
+                else:
+                    warnings.append(f"Pagination refiner failed for '{section.title}', keeping rule-based split.")
+            elif overflow and config.refiner_enabled and not section.points:
+                warnings.append(f"Pagination refiner skipped for '{section.title}' (no bullet points).")
+
+            if overflow:
+                warnings.append(f"Content may still overflow on '{section.title}'.")
+
+            if split_changed:
+                changed = True
+            new_sections.extend(split_sections)
+
+        if not changed:
+            return {
+                "pagination_passes": passes,
+                "pagination_warnings": warnings,
+                "pagination_needs_regen": False,
+                "stage": WorkflowStage.PAGINATION_REVIEW,
+                "progress": progress,
+            }
+
+        new_outline = Outline(title=outline.title, sections=new_sections, raw_markdown="")
+        new_markdown = build_outline_markdown(new_outline)
+        new_outline.raw_markdown = new_markdown
+
+        history = list(state.get("outline_history", []))
+        if state.get("outline_markdown"):
+            history.append(state["outline_markdown"])
+
+        return {
+            "outline_markdown": new_markdown,
+            "outline": new_outline,
+            "outline_history": history,
+            "pagination_passes": passes,
+            "pagination_warnings": warnings,
+            "pagination_needs_regen": True,
+            "stage": WorkflowStage.PAGINATION_REVIEW,
+            "progress": progress,
+        }
+
+    async def _refine_pagination_groups(
+        self,
+        section: OutlineSection,
+        config,
+        session_id: str | None,
+    ) -> list[list[str]] | None:
+        prompt = get_pagination_refiner_prompt(
+            section_title=section.title,
+            points=section.points,
+            max_points=config.max_bullets,
+            max_chars=config.max_chars,
+        )
+        messages = [
+            SystemMessage(content="你是一位严谨的演示文稿编辑，擅长拆分与压缩内容。"),
+            HumanMessage(content=prompt),
+        ]
+
+        response = await self.llm.ainvoke(messages)
+        content = str(response.content)
+        raw_json = _extract_json_block(content)
+        try:
+            payload = json.loads(raw_json)
+            parsed = _PaginationRefinerPayload.model_validate(payload)
+        except (json.JSONDecodeError, ValidationError) as exc:
+            logger.warning(
+                "Pagination refiner JSON parse failed",
+                session_id=session_id,
+                error=str(exc),
+                raw_content=content[:500],
+            )
+            return None
+
+        groups = []
+        for group in parsed.groups:
+            cleaned = [point.strip() for point in group if point and point.strip()]
+            if cleaned:
+                groups.append(cleaned)
+
+        if len(groups) <= 1:
+            return None
+
+        return groups
 
     async def _design_director_node(self, state: WorkflowState) -> dict:
         """Generate global design system after outline confirmation.

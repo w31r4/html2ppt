@@ -406,6 +406,19 @@ Reflection 审查是一个“生成后质量兜底”阶段：
 - `HTML2PPT_REFLECTION_TEXT_CHAR_LIMIT`：单页文本字符上限（估算，默认 900）
 - `HTML2PPT_REFLECTION_MAX_POINTS_PER_SLIDE`：单页要点数上限（估算，默认 8）
 
+## 📐 Pagination Review（可选）
+
+Pagination Review 是“超出画布自动拆分”的兜底阶段：在 Vue 生成后、Slidev 组装前执行规则拆分，并可选调用 LLM 进一步拆页。
+
+**常用参数（概览）**
+
+- `HTML2PPT_PAGINATION_ENABLED`：是否启用自动分页（默认 true）
+- `HTML2PPT_PAGINATION_MAX_BULLETS`：单页要点数上限（默认 6）
+- `HTML2PPT_PAGINATION_MAX_CHARS`：单页字符上限（估算，默认 260）
+- `HTML2PPT_PAGINATION_MAX_TABLE_ROWS`：表格最大行数（默认 8）
+
+完整配置见 [`.env.example`](.env.example:1)。
+
 
 ## ▶️ 与 Slidev 配合使用（详细）
 

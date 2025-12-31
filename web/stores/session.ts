@@ -17,6 +17,7 @@ export type WorkflowStage =
   | 'outline_confirmed'
   | 'vue_generating'
   | 'vue_completed'
+  | 'pagination_review'
   | 'slidev_assembling'
   | 'completed'
   | 'error';

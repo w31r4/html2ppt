@@ -15,6 +15,7 @@ class WorkflowStage(str, Enum):
     OUTLINE_CONFIRMED = "outline_confirmed"
     VUE_GENERATING = "vue_generating"
     VUE_COMPLETED = "vue_completed"
+    PAGINATION_REVIEW = "pagination_review"
     SLIDEV_ASSEMBLING = "slidev_assembling"
     COMPLETED = "completed"
     ERROR = "error"
@@ -377,6 +378,11 @@ class WorkflowState(TypedDict):
     vue_components: list[VueComponent]
     current_generating_index: int
 
+    # Pagination review
+    pagination_passes: int
+    pagination_warnings: list[str]
+    pagination_needs_regen: bool
+
     # Slidev assembly
     slidev_slides: list[SlidevSlide]
     slides_md: Optional[str]
@@ -414,6 +420,9 @@ def create_initial_state(
         design_system=None,
         vue_components=[],
         current_generating_index=0,
+        pagination_passes=0,
+        pagination_warnings=[],
+        pagination_needs_regen=False,
         slidev_slides=[],
         slides_md=None,
         messages=[],

@@ -378,6 +378,27 @@ VUE_FIX_PROMPT = """你是一位专业的Vue前端开发工程师。请修复以
 请直接输出修复后的完整Vue SFC代码，不要添加任何解释。
 """
 
+PAGINATION_REFINER_PROMPT = """你是一位演示文稿内容编辑，需要将单页内容拆分成多页以避免超出屏幕。
+
+## 页面标题
+{section_title}
+
+## 原始要点
+{points_block}
+
+## 约束条件
+- 每页最多 {max_points} 条要点
+- 每页字符数不超过 {max_chars}（粗略估算）
+- 保持原有逻辑顺序与专业语气
+
+## 输出要求
+只输出 JSON，格式如下：
+
+{{"groups":[["要点1","要点2"],["要点3"]]}}
+
+禁止添加解释、注释或额外文本。
+"""
+
 REFLECTION_REVIEW_PROMPT = """你是一位严格但务实的演示文稿审查员（Reflection Reviewer）。
 你将对单页 Vue SFC 组件进行审查，目标是提升可读性、信息密度与版式一致性。
 
@@ -617,6 +638,25 @@ def get_vue_fix_prompt(original_code: str, validation_errors: str) -> str:
         {
             "original_code": original_code,
             "validation_errors": validation_errors,
+        },
+    )
+
+
+def get_pagination_refiner_prompt(
+    *,
+    section_title: str,
+    points: list[str],
+    max_points: int,
+    max_chars: int,
+) -> str:
+    points_block = "\n".join(f"- {point}" for point in points) if points else "(无要点)"
+    return _fill_prompt(
+        PAGINATION_REFINER_PROMPT,
+        {
+            "section_title": section_title,
+            "points_block": points_block,
+            "max_points": max_points,
+            "max_chars": max_chars,
         },
     )
 

@@ -148,6 +148,45 @@ class Settings(BaseSettings):
         description="Maximum number of global rewrite passes",
     )
 
+    # Pagination Settings (auto split overflow content)
+    pagination_enabled: bool = Field(
+        default=True,
+        description="Enable automatic pagination review before Slidev assembly",
+    )
+    pagination_max_bullets: int = Field(
+        default=6,
+        ge=1,
+        description="Maximum bullet points per slide before splitting",
+    )
+    pagination_max_chars: int = Field(
+        default=260,
+        ge=0,
+        description="Approximate max characters per slide before splitting",
+    )
+    pagination_max_table_rows: int = Field(
+        default=8,
+        ge=1,
+        description="Maximum markdown table rows per slide before splitting",
+    )
+    pagination_max_passes: int = Field(
+        default=2,
+        ge=0,
+        description="Maximum pagination passes per session",
+    )
+    pagination_max_splits_per_section: int = Field(
+        default=3,
+        ge=0,
+        description="Maximum extra splits per section (excluding the original)",
+    )
+    pagination_refiner_enabled: bool = Field(
+        default=True,
+        description="Enable LLM refiner fallback for pagination",
+    )
+    pagination_continuation_suffix: str = Field(
+        default=" (续)",
+        description="Suffix appended to continuation slide titles",
+    )
+
     # Storage Settings
     data_dir: Path = Field(
         default=Path("data"),

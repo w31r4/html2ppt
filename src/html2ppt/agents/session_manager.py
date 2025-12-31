@@ -323,6 +323,9 @@ class SessionManager:
 
         # Mark outline as confirmed
         session.state["stage"] = WorkflowStage.OUTLINE_CONFIRMED
+        session.state["pagination_passes"] = 0
+        session.state["pagination_warnings"] = []
+        session.state["pagination_needs_regen"] = False
 
         logger.info("Outline confirmed", session_id=session_id)
 
