@@ -2,7 +2,7 @@
   <div>
     <div class="relative rounded-2xl border border-gray-200/70 dark:border-gray-700/70 bg-white/80 dark:bg-[#111317]/80 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur focus-within:ring-2 focus-within:ring-primary/30">
       <textarea
-        class="w-full pl-4 pr-14 py-4 bg-transparent border-none rounded-2xl text-sm leading-relaxed focus:ring-0 resize-none min-h-[96px] custom-scrollbar text-gray-800 dark:text-gray-100 placeholder:text-gray-400"
+        class="w-full box-border pl-4 pr-14 py-4 bg-transparent border-none rounded-2xl text-sm leading-relaxed focus:ring-0 resize-none min-h-[96px] custom-scrollbar text-gray-800 dark:text-gray-100 placeholder:text-gray-400"
         :value="modelValue"
         :disabled="disabled"
         placeholder="Describe your deck, audience, tone..."

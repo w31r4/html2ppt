@@ -41,6 +41,5 @@ export default defineConfig({
     'btn-primary': 'bg-primary hover:bg-primary-dark text-white shadow-sm shadow-primary/30',
     'btn-ghost': 'bg-white dark:bg-card-dark border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700',
     'icon-btn': 'p-2 rounded-xl text-gray-400 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
-    'custom-scrollbar': 'scrollbar scrollbar-w-1.5 scrollbar-track-transparent scrollbar-thumb-gray-300/30 hover:scrollbar-thumb-gray-300/50 scrollbar-thumb-rounded-full',
   }
 });
