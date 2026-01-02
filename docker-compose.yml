@@ -75,6 +75,21 @@ services:
       - html2ppt-network
 
   # ==========================================================================
+  # Browserless - Headless Chrome for visual feedback loop
+  # ==========================================================================
+  browserless:
+    image: browserless/chrome:latest
+    container_name: html2ppt-browserless
+    restart: unless-stopped
+    environment:
+      - MAX_CONCURRENT_SESSIONS=5
+      - CONNECTION_TIMEOUT=60000
+      - MAX_QUEUE_LENGTH=10
+    networks:
+      - html2ppt-network
+    # No external port exposure - only accessed internally by backend
+
+  # ==========================================================================
   # Backend - FastAPI API server
   # ==========================================================================
   backend:

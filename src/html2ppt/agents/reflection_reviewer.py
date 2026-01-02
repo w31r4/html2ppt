@@ -19,6 +19,8 @@ from html2ppt.config.reflection import ReflectionConfig
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
 
+    from html2ppt.agents.visual_reviewer import VisualReviewer
+
 logger = get_logger(__name__)
 
 
@@ -42,6 +44,7 @@ class ReflectionResult:
     code: str
     warnings: list[str]
     retry_count: int
+    visual_retry_count: int = 0
 
 
 class ReflectionReviewer:
@@ -52,10 +55,12 @@ class ReflectionReviewer:
         generator_llm: "BaseChatModel",
         evaluator_llm: "BaseChatModel",
         config: ReflectionConfig,
+        visual_reviewer: "VisualReviewer | None" = None,
     ) -> None:
         self.generator_llm = generator_llm
         self.evaluator_llm = evaluator_llm
         self.config = config
+        self.visual_reviewer = visual_reviewer
 
     async def review_and_rewrite(
         self,
@@ -144,7 +149,34 @@ class ReflectionReviewer:
 
             current_code = next_code
 
-        return ReflectionResult(code=current_code, warnings=warnings, retry_count=retry_count)
+        # Phase 2: Visual review (after static checks pass)
+        visual_retry_count = 0
+        if self.visual_reviewer and self.config.enable_visual_review:
+            visual_result = await self.visual_reviewer.review_and_fix(
+                section=section,
+                code=current_code,
+                design_system=design_system,
+                session_id=session_id,
+            )
+            current_code = visual_result.code
+            visual_retry_count = visual_result.visual_retry_count
+            warnings.extend(visual_result.warnings)
+
+            if visual_result.visual_retry_count > 0:
+                logger.info(
+                    "Visual review completed",
+                    session_id=session_id,
+                    section_title=section.title,
+                    visual_retries=visual_result.visual_retry_count,
+                    screenshot_captured=visual_result.screenshot_captured,
+                )
+
+        return ReflectionResult(
+            code=current_code,
+            warnings=warnings,
+            retry_count=retry_count,
+            visual_retry_count=visual_retry_count,
+        )
 
     def _static_checks(self, *, section: OutlineSection, code: str) -> tuple[list[str], str | None]:
         issues: list[str] = []

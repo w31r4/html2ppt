@@ -462,6 +462,76 @@ REFLECTION_REWRITE_PROMPT = """你是一位专业的Vue前端开发工程师。
 
 """
 
+VISUAL_REVIEW_PROMPT = """You are a professional UI/UX Design Expert analyzing a presentation slide screenshot.
+
+## Task
+Analyze this slide for visual quality issues that affect readability and professional appearance.
+
+## Original Requirement
+{requirement}
+
+## Design System (if provided)
+{design_system}
+
+## Check for these specific issues:
+
+1. **Text Overflow/Truncation**: Text cut off or extending beyond visible boundaries
+2. **Element Overlap**: Elements covering each other inappropriately
+3. **Contrast Issues**: Text hard to read due to poor color contrast with background
+4. **Alignment Errors**: Misaligned elements that break visual harmony
+5. **Visual Clutter**: Too many elements creating cognitive overload
+6. **Empty/Blank Areas**: Large unexpected empty spaces or missing content
+7. **Font Size Issues**: Text too small or too large for comfortable reading
+
+## Output Format (JSON only, no markdown)
+Return a JSON object with these fields:
+- has_issues: boolean - whether any visual issues were found
+- issues: array of objects, each with:
+  - type: string - category from above (e.g., "text_overflow", "element_overlap")
+  - description: string - specific description of the issue
+  - location: string - where on the slide (e.g., "top-left", "center", "bottom title")
+  - severity: "high" | "medium" | "low"
+- fix_suggestions: array of strings - specific CSS/layout fixes to apply
+
+Example output:
+{{"has_issues": true, "issues": [{{"type": "text_overflow", "description": "Main title text extends beyond the container", "location": "top-center", "severity": "high"}}], "fix_suggestions": ["Reduce title font size", "Add text-overflow: ellipsis"]}}
+
+If no issues found:
+{{"has_issues": false, "issues": [], "fix_suggestions": []}}
+"""
+
+VISUAL_FIX_PROMPT = """你是一位专业的Vue前端开发工程师。
+请根据视觉审查反馈修复该单页组件的视觉问题。
+
+## 页面信息（来自大纲）
+
+- 标题：{section_title}
+
+### 原始大纲内容
+{raw_outline}
+
+## 视觉审查发现的问题
+{visual_issues}
+
+## 修复建议
+{fix_suggestions}
+
+{design_system_section}
+
+## 原始组件代码（Vue SFC）
+```vue
+{original_code}
+```
+
+## 修复要求
+1. 只输出完整的 Vue SFC 代码
+2. 保持 Slidev 兼容：根容器需要 `h-full`/`h-screen` + `w-full` + `overflow-hidden`
+3. 针对性修复视觉问题，不要大幅改变原有设计
+4. 优先使用 CSS 修复（字体大小、边距、溢出处理等）
+5. 不要输出任何解释文字
+
+"""
+
 
 def _fill_prompt(template: str, replacements: dict[str, str]) -> str:
     """Replace {placeholder} tokens without invoking str.format."""
@@ -724,6 +794,62 @@ def get_reflection_rewrite_prompt(
             "original_code": original_code,
             "issues_section": issues_section,
             "rewrite_instructions": rewrite_instructions or "(无额外指令)",
+            "design_system_section": design_system_section or "(未提供设计系统)",
+        },
+    )
+
+
+def get_visual_review_prompt(
+    *,
+    requirement: str,
+    design_system: dict | None = None,
+) -> str:
+    """Generate visual review prompt for VLM analysis."""
+    design_system_text = "(Not provided)"
+    if design_system:
+        design_system_text = json.dumps(design_system, ensure_ascii=False, indent=2)
+
+    return _fill_prompt(
+        VISUAL_REVIEW_PROMPT,
+        {
+            "requirement": requirement,
+            "design_system": design_system_text,
+        },
+    )
+
+
+def get_visual_fix_prompt(
+    *,
+    section_title: str,
+    raw_outline: str,
+    original_code: str,
+    visual_issues: list[dict],
+    fix_suggestions: list[str],
+    design_system: dict | None = None,
+) -> str:
+    """Generate visual fix prompt for rewriting based on VLM feedback."""
+    design_system_section = ""
+    if design_system:
+        design_system_section = "## 设计系统（全局规则，必须遵循）\n\n" + json.dumps(
+            design_system,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+    issues_text = ""
+    for issue in visual_issues:
+        issues_text += f"- **{issue.get('type', 'unknown')}** ({issue.get('severity', 'medium')}): {issue.get('description', '')} - 位置: {issue.get('location', 'unknown')}\n"
+
+    suggestions_text = "\n".join(f"- {s}" for s in fix_suggestions) if fix_suggestions else "(无)"
+
+    return _fill_prompt(
+        VISUAL_FIX_PROMPT,
+        {
+            "section_title": section_title,
+            "raw_outline": raw_outline or "(无)",
+            "original_code": original_code,
+            "visual_issues": issues_text or "(无)",
+            "fix_suggestions": suggestions_text,
             "design_system_section": design_system_section or "(未提供设计系统)",
         },
     )

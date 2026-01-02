@@ -44,10 +44,12 @@ from html2ppt.agents.validators import (
     format_validation_errors_for_prompt,
     validate_vue_component,
 )
+from html2ppt.agents.visual_reviewer import VisualReviewer
 from html2ppt.config.llm import LLMConfig
 from html2ppt.config.logging import get_logger
 from html2ppt.config.reflection import ReflectionConfig
 from html2ppt.config.settings import get_settings
+from html2ppt.services.renderer import ScreenshotRenderer
 
 logger = get_logger(__name__)
 
@@ -137,10 +139,40 @@ class PresentationWorkflow:
                 )
                 evaluator_llm = create_llm(evaluator_config)
 
+            # Initialize visual reviewer if enabled
+            visual_reviewer: VisualReviewer | None = None
+            if self.reflection_config.enable_visual_review:
+                # Create VLM for visual analysis
+                vlm_config = llm_config.model_copy(
+                    update={"model": self.reflection_config.visual_review_model}
+                )
+                vlm = create_llm(vlm_config)
+
+                # Create renderer
+                renderer = ScreenshotRenderer(
+                    browserless_url=self.reflection_config.renderer_url,
+                    vue_preview_url=self.reflection_config.vue_preview_url,
+                    timeout_ms=self.reflection_config.visual_review_timeout_ms,
+                )
+
+                visual_reviewer = VisualReviewer(
+                    vlm=vlm,
+                    generator_llm=self.llm,
+                    config=self.reflection_config,
+                    renderer=renderer,
+                )
+
+                logger.info(
+                    "Visual reviewer initialized",
+                    visual_model=self.reflection_config.visual_review_model,
+                    renderer_url=self.reflection_config.renderer_url,
+                )
+
             self.reflection_reviewer = ReflectionReviewer(
                 generator_llm=self.llm,
                 evaluator_llm=evaluator_llm,
                 config=self.reflection_config,
+                visual_reviewer=visual_reviewer,
             )
 
         self.research_agent = ResearchAgent()

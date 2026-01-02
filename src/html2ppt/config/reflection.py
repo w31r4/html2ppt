@@ -64,6 +64,34 @@ class ReflectionConfig(BaseModel):
         description="Maximum number of global rewrite passes",
     )
 
+    # Visual feedback loop controls
+    enable_visual_review: bool = Field(
+        default=False,
+        description="Enable VLM-based visual review using screenshot analysis",
+    )
+    visual_review_model: str = Field(
+        default="gpt-4o",
+        description="Model to use for visual review (must support vision)",
+    )
+    max_visual_retries: int = Field(
+        default=2,
+        ge=0,
+        description="Maximum visual review retry attempts per slide",
+    )
+    renderer_url: str = Field(
+        default="http://browserless:3000",
+        description="URL of the Browserless Chrome service",
+    )
+    vue_preview_url: str = Field(
+        default="http://vue-preview:5173",
+        description="URL of the Vue preview service for rendering",
+    )
+    visual_review_timeout_ms: int = Field(
+        default=30000,
+        ge=1000,
+        description="Timeout for visual review operations in milliseconds",
+    )
+
 
 def merge_reflection_config(
     base: ReflectionConfig,
