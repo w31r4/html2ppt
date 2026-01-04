@@ -1,5 +1,5 @@
-/* Material Icons */
-@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Outlined');
+/* UnoCSS handles font loading via presetWebFonts (Inter, JetBrains Mono) */
+/* Material Symbols Rounded is loaded in nuxt.config.ts */
 
 :root {
   --font-sans: 'Inter', sans-serif;
@@ -40,20 +40,8 @@ body {
   background-color: rgba(156, 163, 175, 0.5);
 }
 
-.material-icons-outlined {
-  font-family: 'Material Icons Outlined';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 24px;
-  display: inline-block;
-  line-height: 1;
-  text-transform: none;
-  letter-spacing: normal;
-  word-wrap: normal;
-  white-space: nowrap;
-  direction: ltr;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'liga';
+/* Focus visible utility for accessibility */
+.focus-visible-ring:focus-visible {
+  outline: 2px solid #2D9C8F;
+  outline-offset: 2px;
 }

@@ -21,7 +21,7 @@
           :aria-label="canSend ? 'Send message' : 'Enter a message to send'"
           @click="send"
         >
-          <span class="material-icons-outlined text-[18px]" aria-hidden="true">send</span>
+          <span class="material-symbols-rounded text-[18px]" aria-hidden="true">send</span>
         </button>
       </div>
     </div>
