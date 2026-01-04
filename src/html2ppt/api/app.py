@@ -77,6 +77,25 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Configure rate limiting
+    if settings.rate_limit_enabled:
+        from html2ppt.api.rate_limit import RateLimitConfig, RateLimitMiddleware
+
+        rate_limit_config = RateLimitConfig(
+            requests_per_minute=settings.rate_limit_requests_per_minute,
+            burst_size=settings.rate_limit_burst_size,
+        )
+        app.add_middleware(
+            RateLimitMiddleware,
+            config=rate_limit_config,
+            exclude_paths=["/health", "/docs", "/redoc", "/openapi.json"],
+        )
+        logger.info(
+            "Rate limiting enabled",
+            requests_per_minute=settings.rate_limit_requests_per_minute,
+            burst_size=settings.rate_limit_burst_size,
+        )
+
     # Register routers
     from html2ppt.api.routes import health, sessions, settings as settings_router
 

@@ -123,23 +123,10 @@ async def submit_requirements(req: RequirementInput) -> OutlineResponse:
         outline = session.state.get("outline_markdown", "")
         stage = session.state.get("stage", WorkflowStage.INITIAL)
 
-        # Map stage to status
-        status_map = {
-            WorkflowStage.INITIAL: "generating",
-            WorkflowStage.OUTLINE_GENERATED: "draft",
-            WorkflowStage.OUTLINE_CONFIRMED: "confirmed",
-            WorkflowStage.VUE_GENERATING: "generating",
-            WorkflowStage.VUE_COMPLETED: "generating",
-            WorkflowStage.PAGINATION_REVIEW: "generating",
-            WorkflowStage.SLIDEV_ASSEMBLING: "generating",
-            WorkflowStage.COMPLETED: "completed",
-            WorkflowStage.ERROR: "error",
-        }
-
         return OutlineResponse(
             session_id=session.session_id,
             outline=outline or "",
-            status=status_map.get(stage, "draft"),
+            status=_get_outline_status(stage),
         )
 
     except Exception as e:
@@ -166,22 +153,10 @@ async def get_outline(session_id: str) -> OutlineResponse:
     outline = session.state.get("outline_markdown", "")
     stage = session.state.get("stage", WorkflowStage.INITIAL)
 
-    status_map = {
-        WorkflowStage.INITIAL: "generating",
-        WorkflowStage.OUTLINE_GENERATED: "draft",
-        WorkflowStage.OUTLINE_CONFIRMED: "confirmed",
-        WorkflowStage.VUE_GENERATING: "generating",
-        WorkflowStage.VUE_COMPLETED: "generating",
-        WorkflowStage.PAGINATION_REVIEW: "generating",
-        WorkflowStage.SLIDEV_ASSEMBLING: "generating",
-        WorkflowStage.COMPLETED: "completed",
-        WorkflowStage.ERROR: "error",
-    }
-
     return OutlineResponse(
         session_id=session_id,
         outline=outline or "",
-        status=status_map.get(stage, "draft"),
+        status=_get_outline_status(stage),
     )
 
 
@@ -288,21 +263,10 @@ async def get_generation_status(session_id: str) -> SessionStatus:
 
     # Map internal stage to user-friendly status
     stage = status.get("stage", "initial")
-    status_map = {
-        "initial": "pending",
-        "outline_generated": "outline_ready",
-        "outline_confirmed": "generating",
-        "vue_generating": "generating",
-        "vue_completed": "assembling",
-        "pagination_review": "assembling",
-        "slidev_assembling": "assembling",
-        "completed": "completed",
-        "error": "error",
-    }
 
     return SessionStatus(
         session_id=session_id,
-        status=status_map.get(stage, "pending"),
+        status=_get_generation_status(stage),
         stage=stage,
         progress=status.get("progress", 0.0),
         error=status.get("error"),

@@ -229,6 +229,22 @@ class Settings(BaseSettings):
         description="Allowed CORS origins. Use ['*'] for development, specific origins for production.",
     )
 
+    # Rate Limiting Settings
+    rate_limit_enabled: bool = Field(
+        default=True,
+        description="Enable rate limiting for API endpoints",
+    )
+    rate_limit_requests_per_minute: int = Field(
+        default=60,
+        ge=1,
+        description="Maximum requests per minute per client",
+    )
+    rate_limit_burst_size: int = Field(
+        default=10,
+        ge=1,
+        description="Maximum burst of requests allowed",
+    )
+
     def get_llm_config(self) -> LLMConfig:
         """Convert flat settings to LLMConfig object."""
         from pydantic import SecretStr
