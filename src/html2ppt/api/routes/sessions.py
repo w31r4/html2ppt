@@ -18,6 +18,42 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
+# Shared status mapping for WorkflowStage -> user-facing status
+_STAGE_TO_OUTLINE_STATUS: dict[WorkflowStage, str] = {
+    WorkflowStage.INITIAL: "generating",
+    WorkflowStage.OUTLINE_GENERATED: "draft",
+    WorkflowStage.OUTLINE_CONFIRMED: "confirmed",
+    WorkflowStage.VUE_GENERATING: "generating",
+    WorkflowStage.VUE_COMPLETED: "generating",
+    WorkflowStage.PAGINATION_REVIEW: "generating",
+    WorkflowStage.SLIDEV_ASSEMBLING: "generating",
+    WorkflowStage.COMPLETED: "completed",
+    WorkflowStage.ERROR: "error",
+}
+
+_STAGE_TO_GENERATION_STATUS: dict[str, str] = {
+    "initial": "pending",
+    "outline_generated": "outline_ready",
+    "outline_confirmed": "generating",
+    "vue_generating": "generating",
+    "vue_completed": "assembling",
+    "pagination_review": "assembling",
+    "slidev_assembling": "assembling",
+    "completed": "completed",
+    "error": "error",
+}
+
+
+def _get_outline_status(stage: WorkflowStage) -> str:
+    """Map workflow stage to outline response status."""
+    return _STAGE_TO_OUTLINE_STATUS.get(stage, "draft")
+
+
+def _get_generation_status(stage: str) -> str:
+    """Map workflow stage string to generation status."""
+    return _STAGE_TO_GENERATION_STATUS.get(stage, "pending")
+
+
 class RequirementInput(BaseModel):
     """Input model for requirement submission."""
 

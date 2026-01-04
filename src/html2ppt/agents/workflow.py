@@ -50,6 +50,7 @@ from html2ppt.config.logging import get_logger
 from html2ppt.config.reflection import ReflectionConfig
 from html2ppt.config.settings import get_settings
 from html2ppt.services.renderer import ScreenshotRenderer
+from html2ppt.utils import extract_code_block, extract_json_block
 
 logger = get_logger(__name__)
 
@@ -59,36 +60,6 @@ MAX_VALIDATION_RETRIES = 3
 
 class _PaginationRefinerPayload(BaseModel):
     groups: list[list[str]] = Field(default_factory=list)
-
-
-def _extract_code_block(text: str, language: str = "") -> str:
-    """Extract code from markdown code block.
-
-    Args:
-        text: Text potentially containing code block
-        language: Expected language marker (tsx, markdown, etc.)
-
-    Returns:
-        Extracted code or original text if no code block found
-    """
-    # Try to extract code block with specific language
-    pattern = rf"```{language}\s*([\s\S]*?)```"
-    match = re.search(pattern, text)
-    if match:
-        return match.group(1).strip()
-
-    # Try generic code block
-    pattern = r"```\s*([\s\S]*?)```"
-    match = re.search(pattern, text)
-    if match:
-        return match.group(1).strip()
-
-    return text.strip()
-
-
-def _extract_json_block(text: str) -> str:
-    match = re.search(r"\{[\s\S]*\}", text)
-    return match.group(0) if match else text
 
 
 def _sanitize_component_name(title: str) -> str:
@@ -489,7 +460,7 @@ class PresentationWorkflow:
 
         response = await self.llm.ainvoke(messages)
         content = str(response.content)
-        raw_json = _extract_json_block(content)
+        raw_json = extract_json_block(content)
         try:
             payload = json.loads(raw_json)
             parsed = _PaginationRefinerPayload.model_validate(payload)
@@ -654,7 +625,7 @@ class PresentationWorkflow:
                     ]
 
                     response = await self.llm.ainvoke(messages)
-                    code = _extract_code_block(response.content, "vue")
+                    code = extract_code_block(response.content, "vue")
 
                     # Validation and fix loop
                     retry_count = 0
@@ -702,7 +673,7 @@ class PresentationWorkflow:
                         ]
 
                         fix_response = await self.llm.ainvoke(fix_messages)
-                        code = _extract_code_block(fix_response.content, "vue")
+                        code = extract_code_block(fix_response.content, "vue")
 
                     # Reflection review & (optional) rewrite loop
                     reflection_warnings: list[str] = []

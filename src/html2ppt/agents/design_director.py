@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import TYPE_CHECKING
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -11,6 +10,7 @@ from pydantic import ValidationError
 
 from html2ppt.agents.state import DesignSystem
 from html2ppt.config.logging import get_logger
+from html2ppt.utils import extract_json
 
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
@@ -141,7 +141,7 @@ class DesignDirectorAgent:
         Raises:
             ValueError: If parsing or validation fails.
         """
-        raw_json = self._extract_json(content)
+        raw_json = extract_json(content)
 
         try:
             payload = json.loads(raw_json)
@@ -162,32 +162,3 @@ class DesignDirectorAgent:
                 payload=payload,
             )
             raise ValueError(f"Design system validation failed: {exc}") from exc
-
-    @staticmethod
-    def _extract_json(text: str) -> str:
-        """Extract JSON from text that may contain markdown code blocks.
-
-        Args:
-            text: Raw text possibly containing JSON.
-
-        Returns:
-            Extracted JSON string.
-        """
-        # Try to find JSON in markdown code block
-        match = re.search(r"```json\s*([\s\S]*?)```", text)
-        if match:
-            return match.group(1).strip()
-
-        # Try generic code block
-        match = re.search(r"```\s*([\s\S]*?)```", text)
-        if match:
-            return match.group(1).strip()
-
-        # Try to find raw JSON object
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            return text[start : end + 1].strip()
-
-        # Return as-is and let JSON parser handle errors
-        return text.strip()

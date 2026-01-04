@@ -1,6 +1,7 @@
 """Session manager for workflow execution."""
 
 import asyncio
+import time
 from dataclasses import dataclass, field
 from typing import Optional
 from uuid import uuid4
@@ -23,6 +24,10 @@ logger = get_logger(__name__)
 _REFLECTION_NAMESPACE = "reflection"
 _LLM_NAMESPACE = "llm"
 
+# Session TTL defaults
+DEFAULT_SESSION_TTL_SECONDS = 3600  # 1 hour
+SESSION_CLEANUP_INTERVAL_SECONDS = 300  # 5 minutes
+
 
 @dataclass
 class Session:
@@ -34,6 +39,23 @@ class Session:
     thread_config: dict = field(default_factory=dict)
     started: bool = False  # Track if workflow has been started
     output_saved: bool = False
+    created_at: float = field(default_factory=time.time)
+    last_accessed_at: float = field(default_factory=time.time)
+
+    def touch(self) -> None:
+        """Update last accessed timestamp."""
+        self.last_accessed_at = time.time()
+
+    def is_expired(self, ttl_seconds: float) -> bool:
+        """Check if session has expired based on TTL.
+
+        Args:
+            ttl_seconds: Time-to-live in seconds
+
+        Returns:
+            True if session has expired
+        """
+        return (time.time() - self.last_accessed_at) > ttl_seconds
 
 
 class SessionManager:
@@ -41,13 +63,77 @@ class SessionManager:
 
     _instance: Optional["SessionManager"] = None
     _sessions: dict[str, Session] = {}
+    _cleanup_task: Optional[asyncio.Task] = None
+    _session_ttl: float = DEFAULT_SESSION_TTL_SECONDS
 
     def __new__(cls) -> "SessionManager":
         """Singleton pattern for session manager."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._sessions = {}
+            cls._cleanup_task = None
         return cls._instance
+
+    def start_cleanup_task(self, ttl_seconds: float | None = None) -> None:
+        """Start the background session cleanup task.
+
+        Args:
+            ttl_seconds: Optional TTL override. If not provided, uses default.
+        """
+        if ttl_seconds is not None:
+            self._session_ttl = ttl_seconds
+
+        if self._cleanup_task is None or self._cleanup_task.done():
+            self._cleanup_task = asyncio.create_task(self._cleanup_loop())
+            logger.info(
+                "Session cleanup task started",
+                ttl_seconds=self._session_ttl,
+                interval_seconds=SESSION_CLEANUP_INTERVAL_SECONDS,
+            )
+
+    def stop_cleanup_task(self) -> None:
+        """Stop the background session cleanup task."""
+        if self._cleanup_task and not self._cleanup_task.done():
+            self._cleanup_task.cancel()
+            logger.info("Session cleanup task stopped")
+
+    async def _cleanup_loop(self) -> None:
+        """Background loop that periodically cleans up expired sessions."""
+        while True:
+            try:
+                await asyncio.sleep(SESSION_CLEANUP_INTERVAL_SECONDS)
+                self._cleanup_expired_sessions()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error("Session cleanup error", error=str(e))
+
+    def _cleanup_expired_sessions(self) -> None:
+        """Remove sessions that have exceeded their TTL."""
+        expired_ids = [
+            session_id
+            for session_id, session in self._sessions.items()
+            if session.is_expired(self._session_ttl)
+        ]
+
+        for session_id in expired_ids:
+            del self._sessions[session_id]
+            logger.info("Session expired and removed", session_id=session_id)
+
+        if expired_ids:
+            logger.info(
+                "Session cleanup completed",
+                removed_count=len(expired_ids),
+                remaining_count=len(self._sessions),
+            )
+
+    def get_session_count(self) -> int:
+        """Get the current number of active sessions.
+
+        Returns:
+            Number of sessions currently managed
+        """
+        return len(self._sessions)
 
     def get_llm_config(self) -> LLMConfig:
         """Get current LLM configuration.
@@ -235,7 +321,10 @@ class SessionManager:
         Returns:
             Session if found, None otherwise
         """
-        return self._sessions.get(session_id)
+        session = self._sessions.get(session_id)
+        if session:
+            session.touch()  # Update last accessed timestamp
+        return session
 
     def get_outline(self, session_id: str) -> Optional[str]:
         """Get outline markdown for a session.

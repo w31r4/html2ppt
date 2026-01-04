@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from html2ppt import __version__
+from html2ppt.agents.session_manager import get_session_manager
 from html2ppt.config.logging import setup_logging, get_logger
 from html2ppt.config.settings import get_settings
 
@@ -39,8 +40,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     settings.output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Start session cleanup task
+    session_manager = get_session_manager()
+    session_manager.start_cleanup_task(ttl_seconds=settings.session_ttl_seconds)
+
     yield
 
+    # Stop session cleanup task
+    session_manager.stop_cleanup_task()
     logger.info("Shutting down HTML2PPT")
 
 
@@ -64,7 +71,7 @@ def create_app() -> FastAPI:
     # Configure CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Configure appropriately for production
+        allow_origins=settings.cors_allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

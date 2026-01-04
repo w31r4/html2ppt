@@ -216,6 +216,19 @@ class Settings(BaseSettings):
         description="Automatically save slides.md and components after completion",
     )
 
+    # Session Settings
+    session_ttl_seconds: int = Field(
+        default=3600,  # 1 hour
+        ge=60,
+        description="Session time-to-live in seconds (sessions expire after this period of inactivity)",
+    )
+
+    # CORS Settings
+    cors_allowed_origins: list[str] = Field(
+        default=["*"],
+        description="Allowed CORS origins. Use ['*'] for development, specific origins for production.",
+    )
+
     def get_llm_config(self) -> LLMConfig:
         """Convert flat settings to LLMConfig object."""
         from pydantic import SecretStr

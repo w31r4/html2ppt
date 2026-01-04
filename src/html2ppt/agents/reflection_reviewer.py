@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -15,6 +14,7 @@ from html2ppt.agents.state import OutlineSection
 from html2ppt.agents.validators import format_validation_errors_for_prompt, validate_vue_component
 from html2ppt.config.logging import get_logger
 from html2ppt.config.reflection import ReflectionConfig
+from html2ppt.utils import extract_code_block, extract_json
 
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
@@ -241,7 +241,7 @@ class ReflectionReviewer:
         response = await self.evaluator_llm.ainvoke(messages)
         content = str(response.content)
 
-        raw_json = self._extract_json(content)
+        raw_json = extract_json(content)
         try:
             payload = json.loads(raw_json)
         except json.JSONDecodeError as exc:
@@ -278,40 +278,10 @@ class ReflectionReviewer:
             HumanMessage(content=prompt),
         ]
         response = await self.generator_llm.ainvoke(messages)
-        return self._extract_code_block(str(response.content), "vue")
+        return extract_code_block(str(response.content), "vue")
 
     @staticmethod
     def _default_rewrite_instructions(issues: list[str]) -> str:
         if not issues:
             return ""
         return "；".join(issues)
-
-    @staticmethod
-    def _extract_json(text: str) -> str:
-        match = re.search(r"```json\s*([\s\S]*?)```", text)
-        if match:
-            return match.group(1).strip()
-
-        match = re.search(r"```\s*([\s\S]*?)```", text)
-        if match:
-            return match.group(1).strip()
-
-        start = text.find("{")
-        end = text.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            return text[start : end + 1].strip()
-
-        return text.strip()
-
-    @staticmethod
-    def _extract_code_block(text: str, language: str = "") -> str:
-        pattern = rf"```{language}\s*([\s\S]*?)```"
-        match = re.search(pattern, text)
-        if match:
-            return match.group(1).strip()
-
-        match = re.search(r"```\s*([\s\S]*?)```", text)
-        if match:
-            return match.group(1).strip()
-
-        return text.strip()
