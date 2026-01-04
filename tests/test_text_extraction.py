@@ -79,7 +79,9 @@ class TestExtractJsonBlock:
 }
 Done'''
         result = extract_json_block(text)
-        assert '{"key": "value"' in result
+        assert '"key"' in result
+        assert '"value"' in result
+        assert '"nested"' in result
 
     def test_returns_original_when_no_json(self):
         """Return original text when no JSON found."""
